@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YAM Games | المتجر الرقمي للألعاب</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        .hexagon { clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); transition: all 0.3s ease; }
+        /* خلفية الأشكال التفاعلية */
+        .bg-pattern {
+            background-image: radial-gradient(rgba(34, 197, 94, 0.1) 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+    </style>
+</head>
+<body class="bg-gray-950 text-white font-sans min-h-screen flex flex-col justify-between bg-pattern select-none">
+
+    <!-- الهيدر الثابت -->
+    <header class="bg-gray-900/80 backdrop-blur-md border-b border-green-500/20 p-4 sticky top-0 z-50">
+        <div class="max-w-4xl mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-black text-green-400 cursor-pointer" onclick="showPage('welcome')">YAM Games 🎮</h1>
+            <div class="flex gap-3">
+                <button onclick="showPage('products')" class="bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-xl text-xs font-bold transition">المتجر</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- المحتوى الرئيسي المتغير -->
+    <main class="max-w-4xl mx-auto p-4 flex-1 w-full flex items-center justify-center">
+
+        <!-- 1. واجهة الترحيب -->
+        <section id="page-welcome" class="text-center py-12 relative w-full">
+            <!-- رموز خلفية تجميلية -->
+            <div class="absolute inset-0 flex items-center justify-between pointer-events-none opacity-10 text-4xl font-mono text-green-400">
+                <span>? + -</span>
+                <span>→ ⚡ 🎯</span>
+            </div>
+            
+            <div class="relative z-10 max-w-lg mx-auto">
+                <span class="bg-green-500/10 text-green-400 border border-green-500/30 px-4 py-1.5 rounded-full text-xs font-black inline-block mb-4">منصة الألعاب والمسابقات الرقمية</span>
+                <h2 class="text-3xl md:text-5xl font-black mb-4 leading-tight">مرحبًا بكم في <span class="text-green-400">واي إم جيمز</span></h2>
+                <p class="text-gray-400 text-sm mb-8 leading-relaxed">اكتشف أرقى الألعاب الرقمية والتفاعلية لجلسات العائلة والأصدقاء. حمل لعبتك وابتعد عن الملل فوراً.</p>
+                <button onclick="showPage('products')" class="bg-green-600 hover:bg-green-500 text-gray-950 font-black px-8 py-4 rounded-2xl text-base transition shadow-xl shadow-green-600/30 transform hover:scale-105">
+                    إبدأ اللعب الآن 🚀
+                </button>
+            </div>
+        </section>
+
+        <!-- 2. صفحة المنتجات (شبكية - منتجين جنب بعض) -->
+        <section id="page-products" class="hidden w-full py-6">
+            <div class="mb-6 flex justify-between items-center border-b border-gray-800 pb-4">
+                <h3 class="text-xl font-black text-white">الألعاب والمنتجات المتاحة</h3>
+                <button onclick="showPage('welcome')" class="text-gray-400 hover:text-white text-xs">← عودة للرئيسية</button>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <!-- كارت المنتج -->
+                <div onclick="showProductDetail('letters')" class="bg-gray-900 border border-gray-800 hover:border-green-500/50 rounded-2xl p-5 shadow-xl flex flex-col justify-between cursor-pointer transition transform hover:-translate-y-1">
+                    <div>
+                        <div class="bg-green-500/10 text-green-400 h-32 rounded-xl flex items-center justify-center text-4xl mb-4 border border-green-500/20">
+                            🎯
+                        </div>
+                        <h4 class="font-black text-base mb-1 text-white">لعبة حروف التفاعلية</h4>
+                        <p class="text-gray-400 text-xs mb-4 leading-relaxed">لعبة مسابقات ثقافية جماعية بفريقين، تحتوي على أصوات تفاعلية ومؤقت زمني 15 ثانية.</p>
+                    </div>
+                    <div class="flex justify-between items-center pt-3 border-t border-gray-800/80">
+                        <span class="text-green-400 font-black text-base">$9.99</span>
+                        <span class="bg-green-600/20 text-green-400 px-3 py-1 rounded-lg text-xs font-bold">عرض التفاصيل</span>
+                    </div>
+                </div>
+
+                <!-- منتج إضافي كمثال لترتيب الشبكة -->
+                <div onclick="alert('قريباً جداً في متجر YAM Games!')" class="bg-gray-900 border border-gray-800 hover:border-gray-700 rounded-2xl p-5 shadow-xl flex flex-col justify-between cursor-pointer transition transform hover:-translate-y-1 opacity-75">
+                    <div>
+                        <div class="bg-gray-800 text-gray-400 h-32 rounded-xl flex items-center justify-center text-4xl mb-4 border border-gray-700">
+                            🎲
+                        </div>
+                        <h4 class="font-black text-base mb-1 text-white">لعبة الأسئلة السريعة (قريباً)</h4>
+                        <p class="text-gray-400 text-xs mb-4 leading-relaxed">تحدي المعلومات العامة والثقافة بفئات متنوعة.</p>
+                    </div>
+                    <div class="flex justify-between items-center pt-3 border-t border-gray-800/80">
+                        <span class="text-gray-500 font-black text-base">قريباً</span>
+                        <span class="bg-gray-800 text-gray-400 px-3 py-1 rounded-lg text-xs font-bold">ترقبوا</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. صفحة تفاصيل المنتج وتشغيل اللعبة -->
+        <section id="page-detail" class="hidden w-full py-6">
+            <div class="mb-4">
+                <button onclick="showPage('products')" class="text-green-400 hover:underline text-xs font-bold">← العودة لقائمة المنتجات</button>
+            </div>
+
+            <div class="bg-gray-900 border border-green-500/30 rounded-2xl p-6 shadow-2xl">
+                <div class="flex flex-col md:flex-row gap-6 items-center border-b border-gray-800 pb-6 mb-6">
+                    <div class="bg-green-500/10 text-green-400 w-24 h-24 rounded-2xl flex items-center justify-center text-4xl shrink-0 border border-green-500/30">
+                        🎯
+                    </div>
+                    <div>
+                        <span class="bg-green-500/20 text-green-400 px-3 py-1 rounded-full text-xs font-black inline-block mb-2">نسخة رقمية فورية</span>
+                        <h3 class="text-2xl font-black text-white mb-2">لعبة حروف التفاعلية</h3>
+                        <p class="text-gray-400 text-xs leading-relaxed">لعبة مسابقات ثقافية متكاملة مصممة لإشعال حماسة التحدي بين فريقين (الأحمر والأخضر). تتضمن أصوات تفاعلية ومؤقت 15 ثانية.</p>
+                    </div>
+                </div>
+
+                <!-- مساحة تشغيل اللعبة المدمجة -->
+                <div class="bg-gray-950 rounded-2xl p-4 border border-gray-800">
+                    <div class="flex justify-between items-center mb-4">
+                        <h4 class="font-bold text-sm text-yellow-400" id="turn-indicator">دور الفريق: الفريق الأحمر</h4>
+                        <div class="flex gap-2 text-xs">
+                            <span class="bg-red-600/20 text-red-400 px-2.5 py-1 rounded border border-red-500/30">أحمر: <span id="score-red">0</span></span>
+                            <span class="bg-green-600/20 text-green-400 px-2.5 py-1 rounded border border-green-500/30">أخضر: <span id="score-green">0</span></span>
+                        </div>
+                    </div>
+
+                    <!-- شبكة الحروف -->
+                    <div id="board-grid" class="grid grid-cols-6 gap-2 max-w-md mx-auto p-3 bg-gray-900 rounded-xl border border-gray-800"></div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- نافذة السؤال والمؤقت المنبثقة -->
+    <div id="question-modal" class="fixed inset-0 bg-black/80 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-gray-900 border border-green-500/40 w-full max-w-sm rounded-2xl p-6 shadow-2xl text-center relative">
+            <div class="absolute top-4 left-4 bg-gray-950 px-3 py-1.5 rounded-xl border border-gray-800 text-lg font-mono text-yellow-400" id="timer-display">15</div>
+            
+            <span id="modal-letter" class="bg-green-500/20 text-green-400 px-3 py-1 rounded-full text-xs font-black inline-block mb-2">حرف</span>
+            <h3 id="modal-question" class="text-sm font-bold text-gray-100 mb-6 leading-relaxed">السؤال هنا...</h3>
+
+            <div class="grid grid-cols-2 gap-2 mb-3">
+                <button onclick="answerResult('red')" class="bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 rounded-xl text-xs transition">إجابة صحيحة (أحمر)</button>
+                <button onclick="answerResult('green')" class="bg-green-600 hover:bg-green-500 text-white font-bold py-2.5 rounded-xl text-xs transition">إجابة صحيحة (أخضر)</button>
+            </div>
+            <button onclick="closeQuestion(true)" class="w-full bg-gray-800 hover:bg-gray-700 text-gray-400 py-2 rounded-xl text-xs">إلغاء / انتهاء الوقت</button>
+        </div>
+    </div>
+
+    <!-- الفوتر -->
+    <footer class="bg-gray-900 border-t border-gray-800 py-4 text-center text-gray-500 text-xs">
+        YAM Games &copy; 2026 - جميع الحقوق محفوظة
+    </footer>
+
+    <!-- سكريبت إدارة الصفحات والأصوات واللعبة -->
+    <script>
+        // نظام التنقل الذكي بين الواجهات بنفس الرابط
+        function showPage(pageId) {
+            document.getElementById('page-welcome').classList.add('hidden');
+            document.getElementById('page-products').classList.add('hidden');
+            document.getElementById('page-detail').classList.add('hidden');
+
+            document.getElementById('page-' + pageId).classList.remove('hidden');
+            window.scrollTo(0, 0);
+        }
+
+        function showProductDetail(prodKey) {
+            showPage('detail');
+            renderBoard();
+        }
+
+        // Web Audio API للأصوات التفاعلية بدون ملفات خارجية
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') { audioCtx.resume(); }
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            if (type === 'click') {
+                osc.frequency.setValueAtTime(500, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+            } else if (type === 'success') {
+                osc.frequency.setValueAtTime(523.25, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(659.25, audioCtx.currentTime + 0.2);
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+            } else if (type === 'timeout') {
+                osc.frequency.setValueAtTime(180, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.4);
+            }
+        }
+
+        // بيانات لعبة حروف
+        const lettersData = [
+            { letter: 'أ', q: 'ما هو أطول نهر في العالم؟', owner: null },
+            { letter: 'ب', q: 'دولة عاصمتها برلين؟', owner: null },
+            { letter: 'ت', q: 'حيوان يحب الموز ويشبه الإنسان؟', owner: null },
+            { letter: 'ث', q: 'كم ثانية في الدقيقة الواحدة؟', owner: null },
+            { letter: 'ج', q: 'ما هو أكبر كوكب في المجموعة الشمسية؟', owner: null },
+            { letter: 'ح', q: 'عاصمة المملكة العربية السعودية؟', owner: null },
+            { letter: 'خ', q: 'أسرع حيوان بري في العالم؟', owner: null },
+            { letter: 'د', q: 'عنصر كيميائي رمزه Au؟', owner: null },
+            { letter: 'ر', q: 'سورة قرآنية تسمى قلب القرآن؟', owner: null },
+            { letter: 'ز', q: 'معدن ثمين يُقاس بالأونصة؟', owner: null },
+            { letter: 'س', q: 'نبي ألقي في النار فجعلها برداً وسلاماً؟', owner: null },
+            { letter: 'ش', q: 'ما هي عاصمة مصر؟', owner: null },
+            { letter: 'ص', q: 'في أي دولة تقع إسطنبول؟', owner: null },
+            { letter: 'ض', q: 'عدد ركعات صلاة الفجر؟', owner: null },
+            { letter: 'ط', q: 'حيوان يُسمى أبا الحصين؟', owner: null },
+            { letter: 'ظ', q: 'غاز يتنفسه الإنسان؟', owner: null },
+            { letter: 'ع', q: 'أول غزوة في الإسلام؟', owner: null },
+            { letter: 'غ', q: 'عاصمة فرنسا؟', owner: null }
+        ];
+
+        let currentActiveIndex = null;
+        let timer = null;
+        let timeLeft = 15;
+        let currentTurn = 'red';
+        let scoreRed = 0;
+        let scoreGreen = 0;
+
+        function renderBoard() {
+            let gridEl = document.getElementById('board-grid');
+            let html = '';
+            lettersData.forEach((item, index) => {
+                let bgColor = 'bg-gray-800 text-gray-200 hover:bg-gray-700';
+                if (item.owner === 'red') bgColor = 'bg-red-600 text-white shadow-md shadow-red-600/40';
+                if (item.owner === 'green') bgColor = 'bg-green-600 text-white shadow-md shadow-green-600/40';
+
+                html += `<div onclick="selectCell(${index})" class="hexagon h-11 flex items-center justify-center font-black text-sm cursor-pointer ${bgColor} transition transform hover:scale-105">
+                    ${item.letter}
+                </div>`;
+            });
+            gridEl.innerHTML = html;
+        }
+
+        function selectCell(index) {
+            if (lettersData[index].owner !== null) return;
+            playSound('click');
+            currentActiveIndex = index;
+
+            document.getElementById('modal-letter').innerText = 'حرف ' + lettersData[index].letter;
+            document.getElementById('modal-question').innerText = lettersData[index].q;
+            document.getElementById('question-modal').classList.remove('hidden');
+
+            startTimer();
+        }
+
+        function startTimer() {
+            clearInterval(timer);
+            timeLeft = 15;
+            document.getElementById('timer-display').innerText = timeLeft;
+            
+            timer = setInterval(() => {
+                timeLeft--;
+                document.getElementById('timer-display').innerText = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    playSound('timeout');
+                    alert('انتهى الوقت!');
+                    closeQuestion(true);
+                }
+            }, 1000);
+        }
+
+        function answerResult(team) {
+            clearInterval(timer);
+            playSound('success');
+            lettersData[currentActiveIndex].owner = team;
+            
+            if(team === 'red') scoreRed++;
+            else scoreGreen++;
+
+            document.getElementById('score-red').innerText = scoreRed;
+            document.getElementById('score-green').innerText = scoreGreen;
+
+            currentTurn = currentTurn === 'red' ? 'green' : 'red';
+            updateTurnText();
+
+            closeQuestion(false);
+            renderBoard();
+        }
+
+        function closeQuestion(isTimeout) {
+            clearInterval(timer);
+            document.getElementById('question-modal').classList.add('hidden');
+            if(isTimeout) {
+                currentTurn = currentTurn === 'red' ? 'green' : 'red';
+                updateTurnText();
+            }
+        }
+
+        function updateTurnText() {
+            let el = document.getElementById('turn-indicator');
+            if(currentTurn === 'red') {
+                el.innerHTML = 'دور الفريق: <span class="text-red-400">الفريق الأحمر</span>';
+            } else {
+                el.innerHTML = 'دور الفريق: <span class="text-green-400">الفريق الأخضر</span>';
+            }
+        }
+    </script>
+</body>
+</html>
