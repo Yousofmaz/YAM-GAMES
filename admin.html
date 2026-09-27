@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة التحكم الشاملة | YAM Games</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        .fade-in { animation: fadeIn 0.3s ease-in-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="bg-gray-950 text-white font-sans min-h-screen flex flex-col justify-between select-none">
+
+    <!-- 1. شاشة تسجيل الدخول بالبيانات المحددة -->
+    <div id="login-screen" class="fixed inset-0 bg-gray-950 z-50 flex items-center justify-center p-4">
+        <div class="bg-gray-900 border border-green-500/30 w-full max-w-md rounded-2xl p-8 shadow-2xl">
+            <div class="text-center mb-6">
+                <h2 class="text-2xl font-black text-green-400 mb-2">تسجيل دخول الإدارة ⚙️</h2>
+                <p class="text-gray-400 text-xs">أدخل الرقم الوظيفي (1000) وكلمة المرور (8961)</p>
+            </div>
+            <form onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-300 mb-1">الرقم الوظيفي</label>
+                    <input type="text" id="emp-id" required placeholder="1000" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-sm text-white focus:border-green-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-300 mb-1">كلمة المرور</label>
+                    <input type="password" id="emp-pass" required placeholder="8961" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-sm text-white focus:border-green-500 outline-none">
+                </div>
+                <button type="submit" class="w-full bg-green-600 hover:bg-green-500 text-gray-950 font-black py-3 rounded-xl text-sm transition shadow-lg shadow-green-600/20">
+                    دخول للوحة التحكم ↗
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- الهيدر -->
+    <header class="bg-gray-900 border-b border-green-500/20 p-4 shadow-lg sticky top-0 z-40">
+        <div class="max-w-5xl mx-auto flex justify-between items-center">
+            <h1 class="text-lg font-black text-green-400 cursor-pointer" onclick="showSection('menu')">لوحة تحكم YAM Games ⚙️</h1>
+            <div class="flex gap-2">
+                <a href="index.html" target="_blank" class="bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-xl text-xs font-bold transition">عرض المتجر ↗</a>
+                <button onclick="logout()" class="bg-red-600/20 hover:bg-red-600/30 text-red-400 px-3 py-1.5 rounded-xl text-xs font-bold transition">خروج</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- المحتوى الرئيسي -->
+    <main class="max-w-5xl mx-auto p-6 flex-1 w-full">
+
+        <!-- القائمة الرئيسية (الخيارات الثلاثة) -->
+        <section id="sec-menu" class="space-y-6 fade-in">
+            <div class="text-center py-6">
+                <h2 class="text-2xl font-black text-white mb-2">مرحباً بك يا يوسف في لوحة الإدارة</h2>
+                <p class="text-gray-400 text-xs">اختر القسم الذي تريد إدارته وتعديله فوراً</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <!-- خانة إضافة اللعبة -->
+                <div onclick="showSection('add')" class="bg-gray-900 border border-gray-800 hover:border-green-500/50 p-6 rounded-2xl shadow-xl cursor-pointer transition transform hover:-translate-y-1 text-center group">
+                    <div class="text-4xl mb-3 bg-green-500/10 w-16 h-16 mx-auto rounded-2xl flex items-center justify-center border border-green-500/20 group-hover:scale-110 transition">➕</div>
+                    <h3 class="font-black text-base mb-1 text-white">إضافة لعبة جديدة</h3>
+                    <p class="text-gray-400 text-xs">إضافة منتج جديد وسحب صورته من الجوال</p>
+                </div>
+
+                <!-- خانة التعديل والحذف -->
+                <div onclick="showSection('edit')" class="bg-gray-900 border border-gray-800 hover:border-green-500/50 p-6 rounded-2xl shadow-xl cursor-pointer transition transform hover:-translate-y-1 text-center group">
+                    <div class="text-4xl mb-3 bg-blue-500/10 w-16 h-16 mx-auto rounded-2xl flex items-center justify-center border border-blue-500/20 group-hover:scale-110 transition">✏️</div>
+                    <h3 class="font-black text-base mb-1 text-white">تعديل وحذف المنتجات</h3>
+                    <p class="text-gray-400 text-xs">تعديل بيانات الألعاب أو حذفها فوراً</p>
+                </div>
+
+                <!-- خانة الإحصاءات -->
+                <div onclick="showSection('stats')" class="bg-gray-900 border border-gray-800 hover:border-green-500/50 p-6 rounded-2xl shadow-xl cursor-pointer transition transform hover:-translate-y-1 text-center group">
+                    <div class="text-4xl mb-3 bg-yellow-500/10 w-16 h-16 mx-auto rounded-2xl flex items-center justify-center border border-yellow-500/20 group-hover:scale-110 transition">📊</div>
+                    <h3 class="font-black text-base mb-1 text-white">إحصائيات الزيارات والبيع</h3>
+                    <p class="text-gray-400 text-xs">متابعة مشاهدات ومبيعات كل لعبة بدقة</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 1. قسم إضافة لعبة جديدة -->
+        <section id="sec-add" class="hidden space-y-6 fade-in">
+            <div class="flex justify-between items-center border-b border-gray-800 pb-3">
+                <h3 class="text-lg font-black text-green-400">إضافة لعبة جديدة للمتجر</h3>
+                <button onclick="showSection('menu')" class="text-gray-400 hover:text-white text-xs">← عودة للقائمة</button>
+            </div>
+
+            <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl space-y-4 max-w-xl mx-auto">
+                <div>
+                    <label class="block text-xs font-bold text-gray-300 mb-1">اسم اللعبة</label>
+                    <input type="text" id="new-name" placeholder="مثال: لعبة الذكاء السريع" class="w-full bg-gray-950 border border-gray-800 rounded-xl p-3 text-sm text-white outline-none focus:border-green-500">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-300 mb-1">السعر ($)</label>
+                        <input type="text" id="new-price" placeholder="9.99" class="w-full bg-gray-950 border border-gray-800 rounded-xl p-3 text-sm text-white outline-none focus:border-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-300 mb-1">صورة اللعبة (من الجوال)</label>
+                        <input type="file" id="new-img" accept="image/*" class="w-full bg-gray-950 border border-gray-800 rounded-xl p-2 text-xs text-gray-400 file:bg-green-600 file:text-gray-950 file:border-0 file:rounded-lg file:px-3 file:py-1 file:font-bold cursor-pointer">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-300 mb-1">وصف اللعبة</label>
+                    <textarea id="new-desc" rows="3" placeholder="وصف موجز لمميزات اللعبة..." class="w-full bg-gray-950 border border-gray-800 rounded-xl p-3 text-sm text-white outline-none focus:border-green-500"></textarea>
+                </div>
+                <button onclick="addNewGame()" class="w-full bg-green-600 hover:bg-green-500 text-gray-950 font-black py-3 rounded-xl text-sm transition shadow-lg shadow-green-600/20">
+                    حفظ وإضافة المنتج للمتجر ✓
+                </button>
+            </div>
+        </section>
+
+        <!-- 2. قسم تعديل وحذف المنتجات -->
+        <section id="sec-edit" class="hidden space-y-6 fade-in">
+            <div class="flex justify-between items-center border-b border-gray-800 pb-3">
+                <h3 class="text-lg font-black text-blue-400">تعديل وحذف المنتجات</h3>
+                <button onclick="showSection('menu')" class="text-gray-400 hover:text-white text-xs">← عودة للقائمة</button>
+            </div>
+
+            <div id="products-list-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- يتم تعبئتها ديناميكياً -->
+            </div>
+        </section>
+
+        <!-- 3. قسم الإحصائيات (الزيارات والمبيعات) -->
+        <section id="sec-stats" class="hidden space-y-6 fade-in">
+            <div class="flex justify-between items-center border-b border-gray-800 pb-3">
+                <h3 class="text-lg font-black text-yellow-400">إحصائيات المشاهدات والمبيعات</h3>
+                <button onclick="showSection('menu')" class="text-gray-400 hover:text-white text-xs">← عودة للقائمة</button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-400 text-xs font-bold mb-1">أشخاص شاهدوا المنتجات (Views)</p>
+                        <h3 class="text-3xl font-black text-blue-400" id="stat-views">1,420</h3>
+                    </div>
+                    <span class="text-3xl bg-blue-500/10 p-3 rounded-2xl border border-blue-500/20">👁️</span>
+                </div>
+
+                <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-400 text-xs font-bold mb-1">أشخاص اشتروا الألعاب (Sales)</p>
+                        <h3 class="text-3xl font-black text-green-400" id="stat-purchases">94</h3>
+                    </div>
+                    <span class="text-3xl bg-green-500/10 p-3 rounded-2xl border border-green-500/20">🛍️</span>
+                </div>
+            </div>
+
+            <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl">
+                <h4 class="font-bold text-sm text-white mb-4">تفاصيل أداء الألعاب الفردية</h4>
+                <div class="space-y-3" id="game-performance-list">
+                    <!-- تفاصيل تفصيلية لكل لعبة -->
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- الفوتر -->
+    <footer class="bg-gray-900 border-t border-gray-800 py-4 text-center text-gray-500 text-xs">
+        YAM Games Admin Panel &copy; 2026
+    </footer>
+
+    <!-- سكريبت لوحة التحكم المطور -->
+    <script>
+        // التحقق من تسجيل الدخول بالرقم الوظيفي 1000 وكلمة المرور 8961
+        function handleLogin(e) {
+            e.preventDefault();
+            const id = document.getElementById('emp-id').value;
+            const pass = document.getElementById('emp-pass').value;
+            
+            if(id === "1000" && pass === "8961") {
+                localStorage.setItem('yam_admin_logged', 'true');
+                document.getElementById('login-screen').classList.add('hidden');
+                initAdminData();
+            } else {
+                alert('الرقم الوظيفي أو كلمة المرور غير صحيحة! (الرقم: 1000 ، السر: 8961)');
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('yam_admin_logged');
+            document.getElementById('login-screen').classList.remove('hidden');
+        }
+
+        window.onload = function() {
+            if(localStorage.getItem('yam_admin_logged') === 'true') {
+                document.getElementById('login-screen').classList.add('hidden');
+                initAdminData();
+            }
+        }
+
+        // التنقل بين الأقسام الثلاثة بنفس الرابط
+        function showSection(secName) {
+            document.getElementById('sec-menu').classList.add('hidden');
+            document.getElementById('sec-add').classList.add('hidden');
+            document.getElementById('sec-edit').classList.add('hidden');
+            document.getElementById('sec-stats').classList.add('hidden');
+
+            document.getElementById('sec-' + secName).classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+
+            if(secName === 'edit') renderEditProducts();
+            if(secName === 'stats') renderStats();
+        }
+
+        // قاعدة بيانات الألعاب في التخزين المحلي
+        function getGames() {
+            let games = localStorage.getItem('yam_games_list');
+            if(!games) {
+                games = [
+                    { id: 1, name: 'لعبة حروف التفاعلية', desc: 'لعبة مسابقات ثقافية جماعية بفريقين بأصوات ومؤقت 15 ثانية.', price: '9.99', icon: '🎯', views: 850, sales: 62 },
+                    { id: 2, name: 'لعبة الأسئلة السريعة', desc: 'تحدي المعلومات العامة والثقافة بفئات متنوعة.', price: '7.49', icon: '🎲', views: 570, sales: 32 }
+                ];
+                localStorage.setItem('yam_games_list', JSON.stringify(games));
+            }
+            return JSON.parse(games);
+        }
+
+        function saveGames(games) {
+            localStorage.setItem('yam_games_list', JSON.stringify(games));
+        }
+
+        // إضافة لعبة جديدة مع سحب الصورة مباشرة من الجوال
+        function addNewGame() {
+            let name = document.getElementById('new-name').value;
+            let price = document.getElementById('new-price').value;
+            let desc = document.getElementById('new-desc').value;
+            let fileInput = document.getElementById('new-img');
+
+            if(!name || !price) {
+                alert('الرجاء إدخال اسم اللعبة والسعر على الأقل');
+                return;
+            }
+
+            let games = getGames();
+            let newId = Date.now();
+
+            if(fileInput.files && fileInput.files[0]) {
+                let reader = new FileReader();
+                reader.onload = function(e) {
+                    games.push({ id: newId, name, desc, price, iconImg: e.target.result, views: 12, sales: 0 });
+                    saveGames(games);
+                    alert('تمت إضافة اللعبة بنجاح!');
+                    showSection('menu');
+                };
+                reader.readAsDataURL(fileInput.files[0]);
+            } else {
+                games.push({ id: newId, name, desc, price, icon: '🎮', views: 12, sales: 0 });
+                saveGames(games);
+                alert('تمت إضافة اللعبة بنجاح!');
+                showSection('menu');
+            }
+        }
+
+        // عرض المنتجات للتعديل والحذف
+        function renderEditProducts() {
+            let games = getGames();
+            let html = '';
+            games.forEach((g, idx) => {
+                let imgContent = g.iconImg ? `<img src="${g.iconImg}" class="w-16 h-16 rounded-xl object-cover border border-gray-700">` : `<div class="w-16 h-16 rounded-xl bg-gray-800 flex items-center justify-center text-2xl">${g.icon || '🎮'}</div>`;
+                
+                html += `
+                    <div class="bg-gray-900 border border-gray-800 p-4 rounded-2xl flex flex-col justify-between space-y-3">
+                        <div class="flex items-center gap-3">
+                            ${imgContent}
+                            <div class="flex-1">
+                                <input type="text" id="name-${g.id}" value="${g.name}" class="w-full bg-gray-950 border border-gray-800 rounded-lg p-1.5 text-sm text-white font-bold outline-none mb-1">
+                                <input type="text" id="price-${g.id}" value="${g.price}" class="w-24 bg-gray-950 border border-gray-800 rounded-lg p-1 text-xs text-green-400 font-bold outline-none">
+                            </div>
+                        </div>
+                        <textarea id="desc-${g.id}" rows="2" class="w-full bg-gray-950 border border-gray-800 rounded-lg p-2 text-xs text-gray-300 outline-none">${g.desc}</textarea>
+                        <div class="flex justify-end gap-2 pt-2 border-t border-gray-800">
+                            <button onclick="updateGame(${g.id})" class="bg-green-600 hover:bg-green-500 text-gray-950 font-bold px-3 py-1.5 rounded-lg text-xs transition">تعديل ✓</button>
+                            <button onclick="deleteGame(${g.id})" class="bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white font-bold px-3 py-1.5 rounded-lg text-xs transition">حذف ✕</button>
+                        </div>
+                    </div>
+                `;
+            });
+            document.getElementById('products-list-container').innerHTML = html;
+        }
+
+        function updateGame(id) {
+            let games = getGames();
+            let g = games.find(item => item.id === id);
+            if(g) {
+                g.name = document.getElementById(`name-${id}`).value;
+                g.price = document.getElementById(`price-${id}`).value;
+                g.desc = document.getElementById(`desc-${id}`).value;
+                saveGames(games);
+                alert('تم تحديث اللعبة بنجاح!');
+            }
+        }
+
+        function deleteGame(id) {
+            if(confirm('هل أنت متأكد من حذف هذه اللعبة؟')) {
+                let games = getGames();
+                games = games.filter(item => item.id !== id);
+                saveGames(games);
+                renderEditProducts();
+                alert('تم حذف اللعبة.');
+            }
+        }
+
+        // عرض الإحصائيات الشاملة والمفصلة لكل لعبة
+        function renderStats() {
+            let games = getGames();
+            let totalViews = 0;
+            let totalSales = 0;
+            let perfHtml = '';
+
+            games.forEach(g => {
+                totalViews += (g.views || 0);
+                totalSales += (g.sales || 0);
+                perfHtml += `
+                    <div class="bg-gray-950 p-3 rounded-xl border border-gray-800 flex justify-between items-center text-xs">
+                        <span class="font-bold text-white">${g.name}</span>
+                        <div class="flex gap-4">
+                            <span class="text-blue-400">المشاهدات: <b>${g.views || 0}</b></span>
+                            <span class="text-green-400">المبيعات: <b>${g.sales || 0}</b></span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('stat-views').innerText = totalViews;
+            document.getElementById('stat-purchases').innerText = totalSales;
+            document.getElementById('game-performance-list').innerHTML = perfHtml;
+        }
+
+        function initAdminData() {
+            getGames();
+        }
+    </script>
+</body>
+</html>
