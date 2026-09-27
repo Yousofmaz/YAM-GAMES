@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YAM Quiz - لعبة الذكاء العائلية</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <style>
+        .fade-in { animation: fadeIn 0.3s ease-in-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="bg-gray-950 text-white font-sans min-h-screen flex flex-col justify-between select-none">
+
+    <!-- نافذة تسجيل دخول العميل المرتبطة لوحة الإدارة -->
+    <div id="customer-login-modal" class="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
+        <div class="bg-gray-900 border border-green-500/30 w-full max-w-sm rounded-3xl p-6 shadow-2xl text-center">
+            <h3 class="text-lg font-black text-green-400 mb-2">مرحباً بك في YAM Quiz 🎮</h3>
+            <p class="text-gray-400 text-xs mb-6">أدخل اسم المستخدم وكلمة المرور المسجلة لك من الإدارة</p>
+            <form onsubmit="handleCustomerLogin(event)" class="space-y-4 text-right">
+                <div>
+                    <label class="block text-xs font-bold text-gray-300 mb-1">اسم المستخدم</label>
+                    <input type="text" id="cust-user" required class="w-full bg-gray-950 border border-gray-800 rounded-xl p-3 text-sm text-white outline-none focus:border-green-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-300 mb-1">كلمة المرور</label>
+                    <input type="password" id="cust-pass" required class="w-full bg-gray-950 border border-gray-800 rounded-xl p-3 text-sm text-white outline-none focus:border-green-500">
+                </div>
+                <button type="submit" class="w-full bg-green-600 hover:bg-green-500 text-gray-950 font-black py-3 rounded-xl text-sm transition shadow-lg">
+                    دخول للعبة 🚀
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- الهيدر مع الترحيب بالعميل أعلى اليسار -->
+    <header class="bg-gray-900 border-b border-gray-800 p-4 sticky top-0 z-40 shadow-md">
+        <div class="max-w-4xl mx-auto flex justify-between items-center">
+            <h1 class="text-base font-black text-green-400">🧠 YAM Quiz</h1>
+            <div class="flex items-center gap-3">
+                <span id="welcome-user-display" class="text-xs md:text-sm font-bold text-yellow-400 bg-gray-950 px-3.5 py-1.5 rounded-xl border border-gray-800 shadow-inner">مرحبا...</span>
+                <a href="index.html" class="bg-gray-800 hover:bg-gray-700 text-gray-300 px-3.5 py-1.5 rounded-xl text-xs font-bold transition">المتجر الرئيسية 🏠</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- المحتوى الرئيسي للعبة -->
+    <main class="max-w-3xl mx-auto p-4 flex-1 w-full flex flex-col justify-center my-4">
+        
+        <!-- شاشة اختيار التصنيفات العائلية -->
+        <div id="lobby-section" class="bg-gray-900 border border-gray-800 rounded-3xl p-6 shadow-2xl">
+            <div class="text-center mb-6">
+                <h2 class="text-xl md:text-2xl font-black text-white mb-2">اختر تصنيف الأسئلة المناسب لججلستكم العائلية</h2>
+                <p class="text-xs text-gray-400">أسرع شخص يكتب الإجابة الصحيحة يحرز النقطة لفريقه!</p>
+            </div>
+
+            <!-- شبكة التصنيفات التسعة -->
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
+                <button onclick="selectCategory('دينية')" class="bg-gray-950 hover:bg-green-600/20 border border-gray-800 hover:border-green-500 p-4 rounded-2xl text-center transition group">
+                    <span class="text-2xl mb-1 block">🕌</span>
+                    <span class="font-bold text-xs md:text-sm group-hover:text-green-400">أسئلة دينية</span>
+                </button>
+                <button onclick="selectCategory('عامة')" class="bg-gray-950 hover:bg-green-600/20 border border-gray-800 hover:border-green-500 p-4 rounded-2xl text-center transition group">
+                    <span class="text-2xl mb-1 block">🌍</span>
+                    <span class="font-bold text-xs md:text-sm group-hover:text-green-400">أسئلة عامة</span>
+                </button>
+                <button onclick="selectCategory('رياضيات')" class="bg-gray-950 hover:bg-green-600/20 border border-gray-800 hover:border-green-500 p-4 rounded-2xl text-center transition group">
+                    <span class="text-2xl mb-1 block">🔢</span>
+                    <span class="font-bold text-xs md:text-sm group-hover:text-green-400">أسئلة رياضيات</span>
+                </button>
+                <button onclick="selectCategory('جغرافيا')" class="bg-gray-950 hover:bg-green-600/20 border border-gray-800 hover:border-green-500 p-4 rounded-2xl text-center transition group">
+                    <span class="text-2xl mb-1 block">🗺️</span>
+                    <span class="font-bold text-xs md:text-sm group-hover:text-green-400">أسئلة جغرافيا</span>
+                </button>
+                <button onclick="selectCategory('جدة')" class="bg-gray-950 hover:bg-green-600/20 border border-gray-800 hover:border-green-500 p-4 rounded-2xl text-center transition group">
+                    <span class="text-2xl mb-1 block">🌊</span>
+                    <span class="font-bold text-xs md:text-sm group-hover:text-green-400">مدينة جدة</span>
+                </button>
+                <button onclick="selectCategory('الرياض')" class="bg-gray-950 hover:bg-green-600/20 border border-gray-800 hover:border-green-500 p-4 rounded-2xl text-center transition group">
+                    <span class="text-2xl mb-1 block">🏙️</span>
+                    <span class="font-bold text-xs md:text-sm group-hover:text-green-400">مدينة الرياض</span>
+                </button>
+                <button onclick="selectCategory('السعودية')" class="bg-gray-950 hover:bg-green-600/20 border border-gray-800 hover:border-green-500 p-4 rounded-2xl text-center transition group">
+                    <span class="text-2xl mb-1 block">🇸🇦</span>
+                    <span class="font-bold text-xs md:text-sm group-hover:text-green-400">المملكة العربية السعودية</span>
+                </button>
+                <button onclick="selectCategory('حيوانات')" class="bg-gray-950 hover:bg-green-600/20 border border-gray-800 hover:border-green-500 p-4 rounded-2xl text-center transition group">
+                    <span class="text-2xl mb-1 block">🦁</span>
+                    <span class="font-bold text-xs md:text-sm group-hover:text-green-400">أسئلة الحيوانات</span>
+                </button>
+                <button onclick="selectCategory('أمثلة')" class="bg-gray-950 hover:bg-green-600/20 border border-gray-800 hover:border-green-500 p-4 rounded-2xl text-center transition group">
+                    <span class="text-2xl mb-1 block">💡</span>
+                    <span class="font-bold text-xs md:text-sm group-hover:text-green-400">الأمثلة الشعبية</span>
+                </button>
+            </div>
+
+            <!-- مشاركة الـ QR Code لانضمام بقية العائلة -->
+            <div class="bg-gray-950 p-4 rounded-2xl border border-gray-800 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div>
+                    <h4 class="font-black text-sm text-green-400 mb-1">انضمام بقية اللاعبين عبر QR</h4>
+                    <p class="text-xs text-gray-400">امسح الكود بكاميرا الجوال لينضم اللاعبون بأساميهم مباشرة.</p>
+                </div>
+                <div id="qrcode" class="bg-white p-2 rounded-xl"></div>
+            </div>
+        </div>
+
+        <!-- شاشة اللعب التفاعلية -->
+        <div id="game-arena" class="bg-gray-900 border border-gray-800 rounded-3xl p-6 shadow-2xl hidden fade-in">
+            <div class="flex justify-between items-center mb-6 bg-gray-950 p-3 rounded-2xl border border-gray-800 text-xs">
+                <span id="active-category-title" class="text-green-400 font-bold">التصنيف: العام</span>
+                <button onclick="backToLobby()" class="text-gray-400 hover:text-white font-bold">العودة للتصنيفات 🔄</button>
+            </div>
+
+            <div class="text-center mb-6">
+                <span class="bg-yellow-500/20 text-yellow-400 px-3 py-1 rounded-full text-xs font-bold inline-block mb-2">السؤال الحالي</span>
+                <h3 id="question-display" class="text-lg md:text-xl font-black text-white leading-relaxed">جاري تحميل السؤال...</h3>
+            </div>
+
+            <!-- إدخال الإجابة وسرعة التجاوب -->
+            <div class="space-y-4">
+                <div class="flex gap-2">
+                    <input type="text" id="answer-input" placeholder="اكتب إجابتك هنا بأسرع ما يمكن..." class="flex-1 bg-gray-950 border border-gray-800 rounded-xl p-3 text-sm text-white outline-none focus:border-green-500">
+                    <button onclick="submitAnswer()" class="bg-green-600 hover:bg-green-500 text-gray-950 font-black px-6 py-3 rounded-xl text-xs transition shadow-lg">
+                        إرسال الإجابة ⚡
+                    </button>
+                </div>
+                <div id="feedback-msg" class="text-center text-xs font-bold py-2"></div>
+            </div>
+
+            <!-- سجل الفائزين -->
+            <div class="mt-6 border-t border-gray-800 pt-4">
+                <h4 class="text-xs font-black text-gray-400 mb-2">سجل الفائزين في الجلسة:</h4>
+                <div id="winner-announcement" class="bg-gray-950 p-3 rounded-xl border border-gray-800 text-center text-xs font-bold text-yellow-400">
+                    في انتظار أول إجابة صحيحة...
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="bg-gray-900 border-t border-gray-800 py-3 text-center text-gray-500 text-xs">
+        YAM Games &copy; 2026 - جميع الحقوق محفوظة
+    </footer>
+
+    <script>
+        function handleCustomerLogin(e) {
+            e.preventDefault();
+            let user = document.getElementById('cust-user').value;
+            let pass = document.getElementById('cust-pass').value;
+            if(user && pass) {
+                localStorage.setItem('yam_current_customer', user);
+                document.getElementById('customer-login-modal').classList.add('hidden');
+                document.getElementById('welcome-user-display').innerText = 'مرحبا ' + user;
+            }
+        }
+
+        window.onload = function() {
+            let activeCust = localStorage.getItem('yam_current_customer');
+            if(activeCust) {
+                document.getElementById('customer-login-modal').classList.add('hidden');
+                document.getElementById('welcome-user-display').innerText = 'مرحبا ' + activeCust;
+            }
+            new QRCode(document.getElementById("qrcode"), {
+                text: window.location.href,
+                width: 80,
+                height: 80
+            });
+        }
+
+        const questionDatabase = {
+            'دينية': [
+                { q: 'ما هي السورة التي تسمى عروس القرآن؟', a: 'سورة الرحمن' },
+                { q: 'كم عدد سور القرآن الكريم؟', a: '114 سورة' },
+                { q: 'من هو النبي الذي لقب بخليل الله؟', a: 'إبراهيم عليه السلام' }
+            ],
+            'عامة': [
+                { q: 'ما هو أطول نهر في العالم؟', a: 'نهر النيل' },
+                { q: 'ما هي عاصمة أستراليا؟', a: 'كانبرا' },
+                { q: 'ما هو المعدن السائل في الطبيعة؟', a: 'الزئبق' }
+            ],
+            'رياضيات': [
+                { q: 'ما ناتج ضرب 7 في 8؟', a: '56' },
+                { q: 'ما هو جذر الـ 81؟', a: '9' },
+                { q: 'كم عدد زوايا المثلث؟', a: '3 زوايا' }
+            ],
+            'جغرافيا': [
+                { q: 'ما هي أصغر دولة في العالم؟', a: 'فاتيكان' },
+                { q: 'أي قارة تضم أكبر عدد من الدول؟', a: 'أفريقيا' },
+                { q: 'ما هو المحيط الأكبر في العالم؟', a: 'المحيط الهادئ' }
+            ],
+            'جدة': [
+                { q: 'ما هو اللقب الشهير لمدينة جدة؟', a: 'عروس البحر الأحمر' },
+                { q: 'ما اسم النافوررة الأشهر في جدة؟', a: 'نافورة الملك فهد' },
+                { q: 'ما اسم المنطقة التاريخية القديمة في جدة؟', a: 'البلد' }
+            ],
+            'الرياض': [
+                { q: 'ما اسم القصر التاريخي الشهير في وسط الرياض؟', a: 'قصر المصمك' },
+                { q: 'ما هو برج الرياض الأيقوني الشهير؟', a: 'برج المملكة' }
+            ],
+            'السعودية': [
+                { q: 'في أي عام تم توحيد المملكة العربية السعودية؟', a: '1932' },
+                { q: 'ما هي العاصمة الإدارية للمملكة؟', a: 'الرياض' }
+            ],
+            'حيوانات': [
+                { q: 'ما هو أسرع حيوان بري في العالم؟', a: 'الفهد' },
+                { q: 'ما هو الحيوان الذي يُسمى سفينة الصحراء؟', a: 'الجمل' }
+            ],
+            'أمثلة': [
+                { q: 'أكمل المثل: الجار قبل الدار و...', a: 'الرفيق قبل الطريق' },
+                { q: 'أكمل المثل: من طمع...', a: 'طبع' }
+            ]
+        };
+
+        let currentCategory = '';
+        let currentQuestionObj = null;
+
+        function selectCategory(cat) {
+            currentCategory = cat;
+            document.getElementById('active-category-title').innerText = 'التصنيف: ' + cat;
+            document.getElementById('lobby-section').classList.add('hidden');
+            document.getElementById('game-arena').classList.remove('hidden');
+            loadRandomQuestion();
+        }
+
+        function backToLobby() {
+            document.getElementById('game-arena').classList.add('hidden');
+            document.getElementById('lobby-section').classList.remove('hidden');
+        }
+
+        function loadRandomQuestion() {
+            let list = questionDatabase[currentCategory] || questionDatabase['عامة'];
+            currentQuestionObj = list[Math.floor(Math.random() * list.length)];
+            document.getElementById('question-display').innerText = currentQuestionObj.q;
+            document.getElementById('answer-input').value = '';
+            document.getElementById('feedback-msg').innerText = '';
+        }
+
+        function submitAnswer() {
+            let userAns = document.getElementById('answer-input').value.trim();
+            let feedbackEl = document.getElementById('feedback-msg');
+            let activeUser = localStorage.getItem('yam_current_customer') || 'لاعب ضيف';
+
+            if(!userAns) return;
+
+            if(userAns.includes(currentQuestionObj.a) || currentQuestionObj.a.includes(userAns)) {
+                feedbackEl.innerHTML = `<span class="text-green-400">إجابة صحيحة يا ${activeUser}! 🏆</span>`;
+                document.getElementById('winner-announcement').innerHTML = `🎉 الفائز بأسرع إجابة صحيحة: <span class="text-green-400 text-sm">${activeUser}</span> (الإجابة: ${currentQuestionObj.a})`;
+                
+                setTimeout(() => {
+                    loadRandomQuestion();
+                }, 3000);
+            } else {
+                feedbackEl.innerHTML = `<span class="text-red-500">إجابة خاطئة! أعد المحاولة مرة أخرى ❌</span>`;
+            }
+        }
+    </script>
+</body>
+</html>
