@@ -176,15 +176,19 @@
       <!-- إعداد رمز الغرفة -->
       <div class="bg-slate-950/90 border border-amber-400/25 rounded-2xl p-4 sm:p-5 mb-7 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div>
-          <span class="text-xs sm:text-sm font-black text-amber-400 block">رمز الغرفة الموحّد للمزامنة:</span>
-          <p class="text-xs text-slate-400 mt-0.5">تأكد من استخدام نفس الرمز في شاشة اللوحة، لوحة المقدم، وجوالات اللاعبين</p>
+          <span class="text-xs sm:text-sm font-black text-amber-400 block">رمز الغرفة الخاصة بلاعبيها:</span>
+          <p class="text-xs text-slate-400 mt-0.5">كل رمز غرفة مستقل تماماً بلاعبيه وجرسه ولوحته؛ أنشئ غرفة جديدة أو أدخل رمزاً خاصاً</p>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
           <input id="roomCodeInput" type="text" maxlength="6" value="2026"
             class="w-32 text-center tracking-widest text-xl font-black bg-slate-900 border-2 border-amber-400/80 rounded-xl py-2 text-amber-300 uppercase focus:outline-none focus:border-yellow-300" />
           <button type="button" onclick="generateRandomRoom()"
             class="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-200 border border-slate-700 font-bold text-sm transition">
             🎲 رمز جديد
+          </button>
+          <button type="button" onclick="createBrandNewPrivateRoom()"
+            class="px-3.5 py-2.5 rounded-xl bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 border border-amber-400/50 font-black text-sm transition">
+            ✨ إنشاء غرفة خاصة جديدة
           </button>
         </div>
       </div>
@@ -458,17 +462,17 @@
             </button>
           </div>
 
-          <div id="hostBuzzQueueList" class="bg-slate-950 border border-slate-800 rounded-2xl p-3 min-h-[92px] space-y-2 text-xs">
+          <div class="bg-slate-950 border border-slate-800 rounded-2xl p-3 min-h-[92px] space-y-2 text-xs">
             <p class="text-slate-500 text-center py-4">لم يضغط أحد على الجرس بعد...</p>
           </div>
 
           <div class="pt-2 border-t border-slate-800">
             <div class="flex items-center justify-between mb-2">
-              <span class="text-xs font-black text-slate-300">المتسابقون المسجلون (<span id="hostPlayersCount">0</span>):</span>
+              <span class="text-xs font-black text-slate-300">لاعبو هذه الغرفة فقط (<span id="hostPlayersCount">0</span>):</span>
               <button type="button" onclick="openQRModal()" class="text-[11px] text-amber-300 underline font-bold">+ إضافة لاعب بـ QR</button>
             </div>
             <div id="hostPlayersGrid" class="flex flex-wrap gap-1.5 text-xs">
-              <span class="text-slate-500">لا يوجد متسابقون مسجلون</span>
+              <span class="text-slate-500">لا يوجد متسابقون مسجلون في هذه الغرفة</span>
             </div>
           </div>
         </div>
@@ -830,15 +834,19 @@
     }
 
     function normalizeRoom(roomCode) {
-      return (roomCode || window.gameState?.roomCode || "2026").toString().trim().toUpperCase() || "2026";
+      return (roomCode || window.gameState?.roomCode || "2026").toString().trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "") || "2026";
     }
 
     window.cloudPushRoomState = function(roomCode, payloadObj, soundEvent = null) {
       const cleanRoom = normalizeRoom(roomCode);
       if (!cloudConnected || !rtdb) return Promise.resolve(false);
 
+      // نحفظ حالة الغرفة المستقلة مع لاعبيها وطابور جرسها الخاصين بهذه الغرفة فقط
       const cloudDoc = {
         ...payloadObj,
+        roomCode: cleanRoom,
+        players: payloadObj.players || {},
+        buzzQueue: Array.isArray(payloadObj.buzzQueue) ? payloadObj.buzzQueue : [],
         soundEvent: soundEvent || null,
         updatedAt: serverTimestamp()
       };
@@ -852,6 +860,7 @@
 
       return set(ref(rtdb, `rooms/${cleanRoom}/players/${playerObj.id}`), {
         ...playerObj,
+        roomCode: cleanRoom,
         joinedAtServer: serverTimestamp()
       }).catch(() => false);
     };
@@ -862,6 +871,7 @@
 
       return set(ref(rtdb, `rooms/${cleanRoom}/buzzQueue/${buzzEntry.playerId}`), {
         ...buzzEntry,
+        roomCode: cleanRoom,
         buzzedAtServer: serverTimestamp()
       }).catch(() => false);
     };
@@ -886,17 +896,31 @@
       activeRoomUnsub = onValue(
         roomRef,
         (snapshot) => {
-          if (!snapshot.exists()) return;
-          const val = snapshot.val() || {};
-          const incomingState = val.state ? { ...val.state } : {};
+          // تجاهل أي لقطة إذا تغيرت الغرفة الحالية للمستخدم
+          if (normalizeRoom(window.gameState?.roomCode) !== cleanRoom) return;
 
-          if (val.players && typeof val.players === "object") {
-            incomingState.players = {
-              ...(incomingState.players || {}),
-              ...val.players
-            };
+          if (!snapshot.exists()) {
+            // غرفة جديدة لم تُكتب بعد في السحابة: نبقيها نظيفة وخاصة برمزها
+            if (typeof window.handleCloudRoomSnapshot === "function") {
+              window.handleCloudRoomSnapshot({
+                roomCode: cleanRoom,
+                players: {},
+                buzzQueue: [],
+                buzzerLocked: false
+              }, null, true);
+            }
+            return;
           }
 
+          const val = snapshot.val() || {};
+          const stateNode = (val.state && typeof val.state === "object") ? val.state : {};
+          const incomingState = { ...stateNode, roomCode: cleanRoom };
+
+          // قصر اللاعبين على مسار هذه الغرفة فقط دون دمج لاعبين من غرف أخرى
+          const roomPlayers = (val.players && typeof val.players === "object") ? val.players : {};
+          incomingState.players = roomPlayers;
+
+          // قصر طابور الجرس على مسار هذه الغرفة فقط
           if (val.buzzQueue && typeof val.buzzQueue === "object") {
             const list = Object.values(val.buzzQueue).map(item => ({
               ...item,
@@ -910,14 +934,14 @@
             if (list.length > 0) {
               incomingState.buzzerLocked = true;
             }
-          } else if (val.state && Array.isArray(val.state.buzzQueue)) {
-            incomingState.buzzQueue = val.state.buzzQueue;
+          } else if (Array.isArray(stateNode.buzzQueue)) {
+            incomingState.buzzQueue = stateNode.buzzQueue;
           } else {
             incomingState.buzzQueue = [];
           }
 
           if (typeof window.handleCloudRoomSnapshot === "function") {
-            window.handleCloudRoomSnapshot(incomingState, val.state?.soundEvent || null);
+            window.handleCloudRoomSnapshot(incomingState, stateNode.soundEvent || null, false);
           }
         },
         () => {}
@@ -1354,33 +1378,83 @@
       id: 'pl_' + Math.random().toString(36).slice(2, 10),
       name: '',
       team: 'green',
-      joined: false
+      joined: false,
+      lastBuzzAt: 0
     };
 
     let timerInterval = null;
     let lastProcessedSoundStamp = 0;
 
     function getRoomStorageKey(room = gameState.roomCode) {
-      return `horoof_luxury_room_${room.toUpperCase()}`;
+      return `horoof_luxury_room_${normalizeRoomCode(room)}`;
+    }
+
+    function normalizeRoomCode(code) {
+      return (code || '2026').toString().trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '') || '2026';
     }
 
     function saveLocalRoomSnapshot(payload) {
       try {
-        localStorage.setItem(getRoomStorageKey(gameState.roomCode), JSON.stringify(payload));
+        localStorage.setItem(getRoomStorageKey(gameState.roomCode), JSON.stringify({
+          ...payload,
+          roomCode: normalizeRoomCode(gameState.roomCode)
+        }));
       } catch (e) {}
     }
 
     function loadLocalRoomSnapshot(room = gameState.roomCode) {
       try {
-        const raw = localStorage.getItem(getRoomStorageKey(room));
-        return raw ? JSON.parse(raw) : null;
+        const clean = normalizeRoomCode(room);
+        const raw = localStorage.getItem(getRoomStorageKey(clean));
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.roomCode && normalizeRoomCode(parsed.roomCode) !== clean) {
+          return null;
+        }
+        return parsed;
       } catch (e) {
         return null;
       }
     }
 
-    window.handleCloudRoomSnapshot = function(incoming, soundEvent = null) {
+    function resetRoomLocalMemory(roomCode) {
+      const clean = normalizeRoomCode(roomCode);
+      gameState.roomCode = clean;
+      gameState.revision = 0;
+      lastRevision = 0;
+      gameState.board = [];
+      gameState.unusedLetters = [];
+      gameState.currentTurn = 'green';
+      gameState.contestingTeam = 'green';
+      gameState.activeCell = null;
+      gameState.editingCell = null;
+      gameState.greenScore = 0;
+      gameState.redScore = 0;
+      gameState.roundOver = false;
+      gameState.winningCells = [];
+      gameState.timeLeft = gameState.timerDuration;
+      gameState.timerRunning = false;
+      gameState.timerPaused = false;
+      gameState.currentQuestionIndex = 0;
+      gameState.buzzerLocked = false;
+      gameState.buzzQueue = [];
+      gameState.players = {};
+    }
+
+    window.handleCloudRoomSnapshot = function(incoming, soundEvent = null, isEmptyRoom = false) {
       if (!incoming) return;
+      if (incoming.roomCode && normalizeRoomCode(incoming.roomCode) !== normalizeRoomCode(gameState.roomCode)) {
+        return;
+      }
+
+      if (isEmptyRoom) {
+        gameState.players = {};
+        gameState.buzzQueue = [];
+        gameState.buzzerLocked = false;
+        saveLocalRoomSnapshot(buildSyncPayload());
+        syncAllUIs();
+        return;
+      }
 
       const prevBuzzCount = gameState.buzzQueue.length;
       const incomingRev = incoming.revision || 0;
@@ -1393,19 +1467,20 @@
       }
 
       let changed = false;
-      if (incoming.players && JSON.stringify(incoming.players) !== JSON.stringify(gameState.players)) {
-        gameState.players = {
-          ...(gameState.players || {}),
-          ...incoming.players
-        };
+      const nextPlayers = (incoming.players && typeof incoming.players === 'object') ? incoming.players : {};
+      if (JSON.stringify(nextPlayers) !== JSON.stringify(gameState.players)) {
+        gameState.players = nextPlayers;
         changed = true;
       }
 
-      if (Array.isArray(incoming.buzzQueue) && JSON.stringify(incoming.buzzQueue) !== JSON.stringify(gameState.buzzQueue)) {
-        gameState.buzzQueue = incoming.buzzQueue;
+      const nextBuzz = Array.isArray(incoming.buzzQueue) ? incoming.buzzQueue : [];
+      if (JSON.stringify(nextBuzz) !== JSON.stringify(gameState.buzzQueue)) {
+        gameState.buzzQueue = nextBuzz;
         if (gameState.buzzQueue.length > 0) {
           gameState.buzzerLocked = true;
           gameState.timerPaused = true;
+        } else {
+          gameState.buzzerLocked = false;
         }
         changed = true;
       }
@@ -1429,13 +1504,15 @@
     };
 
     function setupRoomSync(roomCode) {
-      gameState.roomCode = roomCode.toUpperCase();
+      const cleanRoom = normalizeRoomCode(roomCode);
+      resetRoomLocalMemory(cleanRoom);
+
       if (broadcastChan) {
         broadcastChan.close();
       }
-      broadcastChan = new BroadcastChannel(`horoof_luxury_channel_${gameState.roomCode}`);
+      broadcastChan = new BroadcastChannel(`horoof_luxury_channel_${cleanRoom}`);
       broadcastChan.onmessage = (event) => {
-        if (!event.data) return;
+        if (!event.data || event.data.roomCode !== cleanRoom) return;
         if (event.data.type === 'STATE_SYNC' && event.data.senderId !== instanceId) {
           applyIncomingState(event.data.state, event.data.soundEvent);
         } else if (event.data.type === 'PLAYER_JOIN' && event.data.senderId !== instanceId) {
@@ -1445,20 +1522,20 @@
         }
       };
 
-      const existing = loadLocalRoomSnapshot(gameState.roomCode);
+      const existing = loadLocalRoomSnapshot(cleanRoom);
       if (existing && existing.board && existing.board.length === ROWS) {
         applyIncomingState(existing, null, true);
       }
 
       if (typeof window.cloudSubscribeRoom === 'function') {
-        window.cloudSubscribeRoom(gameState.roomCode);
+        window.cloudSubscribeRoom(cleanRoom);
       }
 
       if (window.__horoofSyncPoll) {
         clearInterval(window.__horoofSyncPoll);
       }
       window.__horoofSyncPoll = setInterval(() => {
-        const snap = loadLocalRoomSnapshot(gameState.roomCode);
+        const snap = loadLocalRoomSnapshot(cleanRoom);
         if (!snap) return;
         const incomingRev = snap.revision || 0;
         const playersChanged = JSON.stringify(snap.players || {}) !== JSON.stringify(gameState.players || {});
@@ -1471,12 +1548,13 @@
 
     window.onCloudBridgeReady = function() {
       if (gameState.roomCode && typeof window.cloudSubscribeRoom === 'function') {
-        window.cloudSubscribeRoom(gameState.roomCode);
+        window.cloudSubscribeRoom(normalizeRoomCode(gameState.roomCode));
       }
     };
 
     function buildSyncPayload() {
       return {
+        roomCode: normalizeRoomCode(gameState.roomCode),
         revision: gameState.revision,
         board: gameState.board,
         unusedLetters: gameState.unusedLetters,
@@ -1496,7 +1574,7 @@
         currentQuestionIndex: gameState.currentQuestionIndex,
         buzzerLocked: gameState.buzzerLocked,
         buzzQueue: gameState.buzzQueue,
-        players: gameState.players
+        players: gameState.players || {}
       };
     }
 
@@ -1508,19 +1586,23 @@
       if (broadcastChan) {
         broadcastChan.postMessage({
           type: 'STATE_SYNC',
+          roomCode: payload.roomCode,
           senderId: instanceId,
           state: payload,
           soundEvent
         });
       }
       if (typeof window.cloudPushRoomState === 'function') {
-        window.cloudPushRoomState(gameState.roomCode, payload, soundEvent);
+        window.cloudPushRoomState(payload.roomCode, payload, soundEvent);
       }
       syncAllUIs();
     }
 
     function applyIncomingState(incoming, soundEvent = null, force = false) {
       if (!incoming) return;
+      if (incoming.roomCode && normalizeRoomCode(incoming.roomCode) !== normalizeRoomCode(gameState.roomCode)) {
+        return;
+      }
       if (!force && incoming.revision && incoming.revision < lastRevision) return;
       lastRevision = incoming.revision || Date.now();
 
@@ -1543,11 +1625,9 @@
       gameState.timerPaused = !!incoming.timerPaused;
       gameState.currentQuestionIndex = incoming.currentQuestionIndex ?? 0;
       gameState.buzzerLocked = !!incoming.buzzerLocked;
-      gameState.buzzQueue = incoming.buzzQueue || [];
-      gameState.players = {
-        ...(gameState.players || {}),
-        ...(incoming.players || {})
-      };
+      gameState.buzzQueue = Array.isArray(incoming.buzzQueue) ? incoming.buzzQueue : [];
+      // استبدال قائمة اللاعبين بلاعبي هذه الغرفة فقط حتى لا تختلط لاعبو الغرف المختلفة
+      gameState.players = (incoming.players && typeof incoming.players === 'object') ? incoming.players : {};
 
       if (soundEvent && SFX[soundEvent]) {
         const now = Date.now();
@@ -1605,14 +1685,17 @@
         return;
       }
 
+      const activeRoomCode = normalizeRoomCode(gameState.roomCode);
       playerSession.name = cleanName;
       playerSession.joined = true;
+      playerSession.lastBuzzAt = 0;
 
-      const latest = loadLocalRoomSnapshot(gameState.roomCode);
+      const latest = loadLocalRoomSnapshot(activeRoomCode);
       if (latest) applyIncomingState(latest, null, true);
 
       const playerObj = {
         id: playerSession.id,
+        roomCode: activeRoomCode,
         name: playerSession.name,
         team: playerSession.team,
         joinedAt: Date.now()
@@ -1639,21 +1722,23 @@
       if (broadcastChan) {
         broadcastChan.postMessage({
           type: 'PLAYER_JOIN',
+          roomCode: activeRoomCode,
           senderId: instanceId,
           player: playerObj
         });
       }
 
       if (typeof window.cloudRegisterPlayer === 'function') {
-        window.cloudRegisterPlayer(gameState.roomCode, playerObj);
+        window.cloudRegisterPlayer(activeRoomCode, playerObj);
       }
 
       pushStateUpdate(null);
-      showToast(`أهلاً بك يا ${playerSession.name}! تم تسجيلك وظهور اسمك في اللوحة والمقدم`);
+      showToast(`أهلاً بك يا ${playerSession.name}! تم تسجيلك في غرفة (${activeRoomCode})`);
     }
 
     function handleRemotePlayerJoin(player) {
       if (!player || !player.id) return;
+      if (player.roomCode && normalizeRoomCode(player.roomCode) !== normalizeRoomCode(gameState.roomCode)) return;
       gameState.players = {
         ...(gameState.players || {}),
         [player.id]: player
@@ -1678,35 +1763,42 @@
       if (!playerSession.joined) return;
       initAudio();
 
-      const exactMs = performance.timeOrigin ? (performance.timeOrigin + performance.now()) : Date.now();
-
-      const latest = loadLocalRoomSnapshot(gameState.roomCode);
-      if (latest) {
-        gameState.buzzQueue = latest.buzzQueue || gameState.buzzQueue;
-        gameState.players = {
-          ...(gameState.players || {}),
-          ...(latest.players || {})
-        };
-      }
-
-      if (gameState.buzzQueue.some(item => item.playerId === playerSession.id)) {
+      const nowMs = Date.now();
+      // حماية بسيطة ضد اللمس المزدوج العرضي (1.2 ثانية) فقط دون منع اللاعب من الضغط مرة أخرى في الأسئلة والجولات التالية
+      if (nowMs - (playerSession.lastBuzzAt || 0) < 1200) {
         return;
       }
 
+      const exactMs = performance.timeOrigin ? (performance.timeOrigin + performance.now()) : nowMs;
+      const activeRoomCode = normalizeRoomCode(gameState.roomCode);
+
+      const latest = loadLocalRoomSnapshot(activeRoomCode);
+      if (latest) {
+        gameState.buzzQueue = Array.isArray(latest.buzzQueue) ? latest.buzzQueue : [];
+        gameState.players = (latest.players && typeof latest.players === 'object') ? latest.players : gameState.players;
+      }
+
+      // في حال إعادة الضغط في سؤال جديد أو بعد فتح الجرس، نحدّث توقيت ضغط اللاعب بدلاً من تجاهله نهائياً
+      const filteredQueue = (gameState.buzzQueue || []).filter(item => item.playerId !== playerSession.id);
+
       const entry = {
         playerId: playerSession.id,
+        roomCode: activeRoomCode,
         name: playerSession.name,
         team: playerSession.team,
         exactMs
       };
 
-      gameState.buzzQueue.push(entry);
-      gameState.buzzQueue.sort((a, b) => {
+      playerSession.lastBuzzAt = nowMs;
+      filteredQueue.push(entry);
+      filteredQueue.sort((a, b) => {
         const ta = getBuzzRankTimestamp(a);
         const tb = getBuzzRankTimestamp(b);
         if (ta !== tb) return ta - tb;
         return (a.exactMs || 0) - (b.exactMs || 0);
       });
+
+      gameState.buzzQueue = filteredQueue;
       gameState.buzzerLocked = true;
       gameState.timerPaused = true;
 
@@ -1715,13 +1807,14 @@
       if (broadcastChan) {
         broadcastChan.postMessage({
           type: 'PLAYER_BUZZ',
+          roomCode: activeRoomCode,
           senderId: instanceId,
           buzzEntry: entry
         });
       }
 
       if (typeof window.cloudPushBuzzPress === 'function') {
-        window.cloudPushBuzzPress(gameState.roomCode, entry);
+        window.cloudPushBuzzPress(activeRoomCode, entry);
       }
 
       pushStateUpdate('buzz');
@@ -1729,15 +1822,18 @@
 
     function handleRemotePlayerBuzz(entry) {
       if (!entry || !entry.playerId) return;
-      if (!gameState.buzzQueue.some(item => item.playerId === entry.playerId)) {
-        gameState.buzzQueue.push(entry);
-        gameState.buzzQueue.sort((a, b) => {
-          const ta = getBuzzRankTimestamp(a);
-          const tb = getBuzzRankTimestamp(b);
-          if (ta !== tb) return ta - tb;
-          return (a.exactMs || 0) - (b.exactMs || 0);
-        });
-      }
+      if (entry.roomCode && normalizeRoomCode(entry.roomCode) !== normalizeRoomCode(gameState.roomCode)) return;
+
+      const filtered = (gameState.buzzQueue || []).filter(item => item.playerId !== entry.playerId);
+      filtered.push(entry);
+      filtered.sort((a, b) => {
+        const ta = getBuzzRankTimestamp(a);
+        const tb = getBuzzRankTimestamp(b);
+        if (ta !== tb) return ta - tb;
+        return (a.exactMs || 0) - (b.exactMs || 0);
+      });
+
+      gameState.buzzQueue = filtered;
       gameState.buzzerLocked = true;
       gameState.timerPaused = true;
       saveLocalRoomSnapshot(buildSyncPayload());
@@ -1748,6 +1844,7 @@
     }
 
     function unlockBuzzer(shouldBroadcast = true) {
+      playerSession.lastBuzzAt = 0;
       gameState.buzzQueue = [];
       gameState.buzzerLocked = false;
       gameState.timerPaused = false;
@@ -1759,13 +1856,24 @@
       } else {
         syncAllUIs();
       }
-      showToast('🔓 تم فتح الجرس لجميع المتسابقين');
+      showToast('🔓 تم فتح الجرس ويمكن للجميع الضغط من جديد');
     }
 
     function generateRandomRoom() {
       const code = Math.floor(1000 + Math.random() * 9000).toString();
       document.getElementById('roomCodeInput').value = code;
       gameState.roomCode = code;
+    }
+
+    function createBrandNewPrivateRoom() {
+      const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+      const suffix = Math.floor(100 + Math.random() * 900);
+      const randLetter = letters[Math.floor(Math.random() * letters.length)];
+      const newRoom = `${randLetter}${suffix}`;
+      document.getElementById('roomCodeInput').value = newRoom;
+      setupRoomSync(newRoom);
+      startNewBoard(true);
+      showToast(`✨ تم إنشاء غرفة خاصة جديدة برمز (${newRoom}) بلاعبين مستقلين`);
     }
 
     function getModeUrl(mode) {
@@ -2480,38 +2588,33 @@
       if (buzzerBtn && playerSession.joined) {
         const myRankIndex = gameState.buzzQueue.findIndex(b => b.playerId === playerSession.id);
         if (myRankIndex === 0) {
+          buzzerBtn.disabled = false;
+          buzzerBtn.classList.remove('locked-orb');
+          buzzerTitle.textContent = 'الأسرع! ⚡';
           buzzerBtn.title = 'أنت الأسرع!';
           feedbackBox.innerHTML = `
             <span class="text-sm font-black text-emerald-400">🏆 ضغطتك هي الأسرع! استعد للإجابة</span>
-            <span class="text-xs text-slate-300 mt-0.5">بانتظار قرار المقدم</span>
+            <span class="text-xs text-slate-300 mt-0.5">يمكنك الضغط مجدداً عند فتح الجرس أو في السؤال التالي</span>
           `;
         } else if (myRankIndex > 0) {
           const fastestStamp = getBuzzRankTimestamp(gameState.buzzQueue[0]);
           const myStamp = getBuzzRankTimestamp(gameState.buzzQueue[myRankIndex]);
           const diff = ((myStamp - fastestStamp) / 1000).toFixed(3);
-          buzzerBtn.disabled = true;
-          buzzerBtn.classList.add('locked-orb');
-          buzzerTitle.textContent = `المركز #${myRankIndex + 1}`;
+          buzzerBtn.disabled = false;
+          buzzerBtn.classList.remove('locked-orb');
+          buzzerTitle.textContent = `#${myRankIndex + 1} • اضغط`;
           feedbackBox.innerHTML = `
             <span class="text-sm font-black text-amber-300">تم تسجيل ضغطتك (المركز #${myRankIndex + 1})</span>
-            <span class="text-xs text-slate-400 mt-0.5">الفارق عن الأسرع: +${diff} ثانية</span>
-          `;
-        } else if (gameState.buzzQueue.length > 0 || gameState.buzzerLocked) {
-          buzzerBtn.disabled = true;
-          buzzerBtn.classList.add('locked-orb');
-          buzzerTitle.textContent = 'مغلق';
-          const firstName = gameState.buzzQueue[0]?.name || 'متسابق آخر';
-          feedbackBox.innerHTML = `
-            <span class="text-sm font-black text-red-400">سبقك (${firstName}) بالضغط على الجرس</span>
-            <span class="text-xs text-slate-400 mt-0.5">انتظر فتح الجرس للسؤال التالي</span>
+            <span class="text-xs text-slate-400 mt-0.5">الفارق عن الأسرع: +${diff} ثانية (الجرس متاح للضغط مرة أخرى)</span>
           `;
         } else {
+          // الجرس مفتوح أو جاهز للضغط في السؤال/الجولة الحالية
           buzzerBtn.disabled = false;
           buzzerBtn.classList.remove('locked-orb');
           buzzerTitle.textContent = 'اضغط الآن!';
           feedbackBox.innerHTML = `
             <span class="text-sm font-extrabold text-amber-300">الجرس جاهز.. كن الأسرع!</span>
-            <span class="text-xs text-slate-400 mt-0.5">يتم احتساب السرعة بدقة أجزاء الثانية</span>
+            <span class="text-xs text-slate-400 mt-0.5">يمكنك الضغط في كل سؤال وجولة دون قيود</span>
           `;
         }
       }
