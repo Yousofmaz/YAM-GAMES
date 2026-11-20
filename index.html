@@ -3,2398 +3,1545 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>لعبة حروف التفاعلية - سباق الحروف</title>
+  <title>سباق الحروف — النسخة الكاملة النهائية</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800;900&display=swap" rel="stylesheet">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
     :root {
-      --luxury-dark: #07090f;
-      --luxury-panel: #111622;
-      --luxury-gold: #f5c542;
-      --luxury-gold-bright: #fde047;
-      --green-team: #008000;
-      --green-bright: #16a34a;
-      --red-team: #e60000;
-      --red-bright: #dc2626;
-      --cream-cell: #fef9c3;
+      --bg: #07090e;
+      --panel: #111622;
+      --panel-2: #182032;
+      --gold: #f5c542;
+      --gold-2: #b8860b;
+      --green: #0d9448;
+      --green-glow: #22c55e;
+      --red: #c81e2b;
+      --red-glow: #ef4444;
+      --cream: #fcf8e3;
+      --text: #f8fafc;
+      --muted: #94a3b8;
     }
 
-    * {
-      box-sizing: border-box;
-      -webkit-tap-highlight-color: transparent;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; -webkit-tap-highlight-color: transparent; }
 
     body {
-      font-family: 'Cairo', sans-serif;
-      background: radial-gradient(circle at 50% 0%, #1c2438 0%, #090c14 55%, #05070c 100%);
-      color: #f8fafc;
+      background: radial-gradient(circle at 50% 0%, #1c2438 0%, var(--bg) 72%);
+      color: var(--text);
       min-height: 100vh;
       overflow-x: hidden;
+    }
+
+    .screen { display: none; min-height: 100vh; padding: 14px; }
+    .screen.active { display: flex; flex-direction: column; }
+    .hidden { display: none !important; }
+
+    button {
+      cursor: pointer; border: none; border-radius: 12px;
+      padding: 10px 16px; font-weight: 800; font-size: 0.95rem;
+      transition: transform 0.14s ease, filter 0.14s ease, box-shadow 0.14s ease;
+    }
+    button:active { transform: scale(0.96); }
+
+    .btn-gold { background: linear-gradient(135deg, var(--gold), var(--gold-2)); color: #090b10; box-shadow: 0 6px 20px rgba(245,197,66,0.28); }
+    .btn-dark { background: var(--panel-2); color: var(--text); border: 1px solid rgba(255,255,255,0.12); }
+    .btn-outline { background: transparent; color: var(--gold); border: 1.5px solid rgba(245,197,66,0.65); }
+    .btn-green { background: linear-gradient(135deg, var(--green-glow), var(--green)); color: #fff; }
+    .btn-red { background: linear-gradient(135deg, var(--red-glow), var(--red)); color: #fff; }
+    .btn-amber { background: linear-gradient(135deg, #f59e0b, #b45309); color: #fff; }
+    .full { width: 100%; }
+    .gold { color: var(--gold); }
+    .muted { color: var(--muted); font-size: 0.9rem; }
+
+    /* شاشة البداية */
+    #setupScreen { align-items: center; justify-content: center; }
+    .setup-box {
+      width: 100%; max-width: 800px;
+      background: linear-gradient(180deg, rgba(20,27,43,0.96), rgba(11,15,24,0.98));
+      border: 2px solid rgba(245,197,66,0.42);
+      border-radius: 26px; padding: 28px; text-align: center;
+      box-shadow: 0 25px 70px rgba(0,0,0,0.75);
+    }
+    .brand-title {
+      display: inline-block; font-size: 2.2rem; font-weight: 900;
+      padding: 6px 28px; border-radius: 999px;
+      background: linear-gradient(135deg, var(--gold), #ffe07d, var(--gold-2));
+      color: #090b10; margin-bottom: 10px;
+    }
+    .room-bar {
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 16px; padding: 14px; margin: 18px 0 22px;
+    }
+    .room-controls { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
+    .room-input {
+      width: 150px; text-align: center; font-size: 1.35rem; font-weight: 900;
+      background: #07090e; color: var(--gold); border: 2px solid var(--gold);
+      border-radius: 12px; padding: 8px 12px; text-transform: uppercase;
+    }
+    .modes-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin-bottom: 20px; }
+    .mode-card {
+      background: var(--panel-2); border: 2px solid rgba(255,255,255,0.08);
+      border-radius: 18px; padding: 20px 14px; color: var(--text);
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+    }
+    .mode-card:hover { border-color: var(--gold); transform: translateY(-3px); box-shadow: 0 12px 28px rgba(245,197,66,0.18); }
+    .mode-card .ico { font-size: 2.2rem; }
+    .mode-card small { color: var(--muted); font-size: 0.82rem; text-align: center; }
+    .quick-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+    /* شاشة اللوحة */
+    .top-hud {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+      background: var(--panel); border: 1px solid rgba(245,197,66,0.25);
+      border-radius: 18px; padding: 10px 18px;
+    }
+    .score-pill {
+      display: flex; align-items: center; gap: 12px;
+      padding: 6px 16px; border-radius: 14px; font-weight: 800; font-size: 1.15rem;
+    }
+    .score-pill.g { background: rgba(34,197,94,0.16); border: 2px solid var(--green-glow); }
+    .score-pill.r { background: rgba(239,68,68,0.16); border: 2px solid var(--red-glow); }
+    .score-pill strong { font-size: 1.7rem; }
+
+    .hud-center { display: flex; align-items: center; gap: 12px; }
+    .room-pill { background: #090c14; border: 1px solid rgba(245,197,66,0.4); color: var(--gold); padding: 4px 12px; border-radius: 10px; font-weight: 800; }
+    .timer-circle {
+      width: 56px; height: 56px; border-radius: 50%;
+      background: #07090e; border: 3px solid var(--gold); color: var(--gold);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.65rem; font-weight: 900;
+    }
+    .timer-circle.danger { border-color: var(--red-glow); color: var(--red-glow); animation: pulse 0.5s infinite alternate; }
+
+    .buzz-alert {
+      margin: 12px auto 0; max-width: 720px; width: 100%;
+      background: linear-gradient(90deg, #172033, #24191e, #172033);
+      border: 2px solid var(--gold); border-radius: 16px; padding: 12px 20px;
+      display: flex; align-items: center; justify-content: center; gap: 14px;
+      box-shadow: 0 10px 30px rgba(245,197,66,0.22);
+    }
+    .buzz-winner-name { font-size: 1.45rem; font-weight: 900; color: var(--gold); }
+    .buzz-winner-sub { font-size: 0.9rem; color: #e2e8f0; }
+
+    .board-stage {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      padding: 16px 0; overflow: auto;
+    }
+
+    .hex-board-shell {
+      position: relative;
+      background: #0b0e15;
+      padding: 28px 36px;
+      border-radius: 26px;
+      border: 3px solid #262f45;
+      box-shadow: 0 24px 70px rgba(0,0,0,0.85);
+    }
+    .border-top, .border-bot {
+      position: absolute; left: 32px; right: 32px; height: 16px;
+      background: linear-gradient(90deg, var(--green), var(--green-glow), var(--green));
+    }
+    .border-top { top: 0; border-radius: 22px 22px 0 0; }
+    .border-bot { bottom: 0; border-radius: 0 0 22px 22px; }
+    .border-left, .border-right {
+      position: absolute; top: 16px; bottom: 16px; width: 22px;
+      background: linear-gradient(180deg, var(--red), var(--red-glow), var(--red));
+    }
+    .border-left { left: 0; border-radius: 22px 0 0 22px; }
+    .border-right { right: 0; border-radius: 0 22px 22px 0; }
+
+    .hex-rows { display: flex; flex-direction: column; gap: 4px; position: relative; z-index: 2; }
+    .hex-row { display: flex; gap: 6px; justify-content: center; }
+    .hex-row.shifted { transform: translateX(-39px); }
+
+    .hex-tile {
+      width: 78px; height: 86px;
+      background: var(--cream); color: #0c1018;
+      clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2.05rem; font-weight: 900; cursor: pointer;
+      transition: transform 0.16s ease, background 0.25s ease, color 0.25s ease;
       user-select: none;
     }
+    .hex-tile:hover { transform: scale(1.06); }
+    .hex-tile.active { background: var(--gold); color: #090b10; animation: pulse 0.65s infinite alternate; }
+    .hex-tile.green { background: var(--green-glow); color: #fff; }
+    .hex-tile.red { background: var(--red-glow); color: #fff; }
+    .hex-tile.win { box-shadow: inset 0 0 0 5px #fff; animation: pulse 0.45s infinite alternate; }
 
-    .gold-border {
-      border-color: rgba(245, 197, 66, 0.45);
-      box-shadow: 0 0 30px rgba(245, 197, 66, 0.08);
+    @keyframes pulse {
+      from { transform: scale(1); filter: brightness(1); }
+      to { transform: scale(1.07); filter: brightness(1.22); }
     }
 
-    .gold-gradient-text {
-      background: linear-gradient(135deg, #fde047 0%, #f5c542 50%, #d97706 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+    .players-footer {
+      display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+      background: var(--panel); border-radius: 14px; padding: 10px 16px;
+    }
+    .team-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+    .chip { padding: 4px 12px; border-radius: 999px; font-size: 0.85rem; font-weight: 800; }
+    .chip.g { background: var(--green); color: #fff; }
+    .chip.r { background: var(--red); color: #fff; }
+
+    /* شاشة المقدم */
+    .host-top {
+      display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;
+      background: var(--panel); padding: 12px 18px; border-radius: 16px; margin-bottom: 14px;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .host-grid {
+      display: grid; grid-template-columns: 310px 1fr 320px; gap: 14px; flex: 1;
+    }
+    @media (max-width: 1100px) { .host-grid { grid-template-columns: 1fr; } }
+
+    .box-panel {
+      background: var(--panel); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 12px;
+    }
+    .mini-rows { display: flex; flex-direction: column; gap: 4px; align-items: center; }
+    .mini-rows .hex-row.shifted { transform: translateX(-22px); }
+    .mini-rows .hex-tile { width: 44px; height: 48px; font-size: 1.15rem; }
+
+    .letter-badge {
+      width: 48px; height: 48px; border-radius: 14px;
+      background: var(--gold); color: #090b10;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 1.6rem; font-weight: 900;
+    }
+    .qa-box {
+      background: #090c14; border-radius: 16px; padding: 18px;
+      border-right: 4px solid var(--gold);
+    }
+    .q-line { font-size: 1.3rem; font-weight: 800; margin: 6px 0 14px; line-height: 1.5; }
+    .a-line { font-size: 1.45rem; font-weight: 900; color: var(--green-glow); }
+
+    .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .timer-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: rgba(255,255,255,0.03); padding: 10px 12px; border-radius: 12px; }
+
+    .buzz-list {
+      background: #090c14; border-radius: 12px; padding: 10px;
+      min-height: 140px; display: flex; flex-direction: column; gap: 8px;
+    }
+    .buzz-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 12px; border-radius: 10px; background: var(--panel-2);
+      border-right: 4px solid var(--gold); font-weight: 800;
+    }
+    .buzz-row.green { border-right-color: var(--green-glow); }
+    .buzz-row.red { border-right-color: var(--red-glow); }
+
+    .roster-box { background: #090c14; border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 6px; max-height: 180px; overflow-y: auto; }
+
+    /* شاشة جرس المتسابق */
+    #playerScreen { align-items: center; justify-content: center; }
+    .p-card, .p-pad {
+      width: 100%; max-width: 420px; background: var(--panel);
+      border: 2px solid rgba(245,197,66,0.35); border-radius: 24px;
+      padding: 26px; text-align: center; box-shadow: 0 20px 55px rgba(0,0,0,0.7);
+    }
+    .p-input {
+      width: 100%; padding: 13px; border-radius: 12px; margin: 16px 0;
+      background: #07090e; border: 2px solid #334155; color: #fff;
+      font-size: 1.1rem; font-weight: 700; text-align: center;
+    }
+    .teams-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+    .team-radio {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 12px; border-radius: 12px; border: 2px solid #334155; cursor: pointer; font-weight: 800;
+    }
+    .team-radio.checked-g { border-color: var(--green-glow); background: rgba(34,197,94,0.18); }
+    .team-radio.checked-r { border-color: var(--red-glow); background: rgba(239,68,68,0.18); }
+
+    .buzzer-btn {
+      width: 236px; height: 236px; border-radius: 50%; margin: 24px auto;
+      background: radial-gradient(circle at 35% 30%, #ff6b6b, #dc2626 65%, #7f1d1d);
+      border: 8px solid #fff; color: #fff; font-size: 1.55rem; font-weight: 900;
+      box-shadow: 0 16px 40px rgba(220,38,38,0.55);
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+    }
+    .buzzer-btn.pressed-me {
+      background: radial-gradient(circle at 35% 30%, #fde047, #eab308 70%, #854d0e);
+      color: #090b10; border-color: #fff; transform: scale(0.96);
+    }
+    .buzzer-btn.locked-other {
+      background: #273043; border-color: #64748b; color: #cbd5e1; box-shadow: none; opacity: 0.72;
+    }
+    .p-status {
+      padding: 12px; border-radius: 12px; background: #090c14;
+      border: 1px solid rgba(245,197,66,0.3); font-weight: 800; font-size: 1.05rem;
     }
 
-    /* تنسيقات اللوحة السداسية SVG */
-    .hex-poly {
-      transition: fill 0.22s ease, transform 0.2s ease, filter 0.22s ease;
-      stroke: #000000;
-      stroke-width: 4.5;
-      stroke-linejoin: round;
+    /* نافذة الباركود والفوز */
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.84);
+      display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 999;
     }
-
-    .playable-hex {
-      cursor: pointer;
+    .modal-card {
+      width: 100%; max-width: 420px; background: var(--panel);
+      border: 2px solid var(--gold); border-radius: 24px; padding: 24px;
+      text-align: center; position: relative;
     }
-
-    .playable-hex:hover .hex-poly {
-      filter: brightness(1.08);
+    .x-btn { position: absolute; top: 12px; left: 12px; background: rgba(255,255,255,0.08); color: #fff; width: 34px; height: 34px; padding: 0; border-radius: 50%; }
+    .qr-canvas-wrap {
+      background: #ffffff; padding: 14px; border-radius: 18px;
+      display: inline-flex; align-items: center; justify-content: center; margin: 14px 0;
     }
-
-    .hex-text {
-      font-family: 'Cairo', sans-serif;
-      font-weight: 900;
-      font-size: 35px;
-      pointer-events: none;
-      dominant-baseline: central;
-      text-anchor: middle;
-      transition: fill 0.22s ease;
+    .link-box {
+      width: 100%; background: #07090e; color: #cbd5e1; border: 1px solid #334155;
+      border-radius: 10px; padding: 8px 10px; font-size: 0.8rem; direction: ltr; text-align: center; margin-bottom: 10px;
     }
-
-    @keyframes pulseGold {
-      0%, 100% {
-        fill: #facc15;
-        filter: drop-shadow(0 0 14px rgba(250, 204, 21, 0.95));
-      }
-      50% {
-        fill: #fef08a;
-        filter: drop-shadow(0 0 28px rgba(250, 204, 21, 1));
-      }
-    }
-
-    .hex-active .hex-poly {
-      animation: pulseGold 0.8s infinite ease-in-out;
-    }
-
-    @keyframes winGlow {
-      0%, 100% {
-        filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.95)) brightness(1.15);
-      }
-      50% {
-        filter: drop-shadow(0 0 28px rgba(250, 204, 21, 1)) brightness(1.4);
-      }
-    }
-
-    .hex-winning .hex-poly {
-      animation: winGlow 0.75s infinite ease-in-out;
-      stroke: #facc15;
-      stroke-width: 6;
-    }
-
-    /* زر الجرس الفاخر للمتسابق */
-    .buzzer-orb {
-      width: 220px;
-      height: 220px;
-      border-radius: 9999px;
-      background: radial-gradient(circle at 32% 28%, #ff6b6b 0%, #dc2626 52%, #7f1d1d 100%);
-      border: 8px solid #fde047;
-      box-shadow:
-        0 18px 0 #581212,
-        0 26px 45px rgba(220, 38, 38, 0.55),
-        inset 0 6px 18px rgba(255, 255, 255, 0.45);
-      transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.2s ease;
-    }
-
-    .buzzer-orb:active:not(:disabled) {
-      transform: translateY(12px) scale(0.97);
-      box-shadow:
-        0 6px 0 #581212,
-        0 10px 20px rgba(220, 38, 38, 0.4),
-        inset 0 4px 12px rgba(0, 0, 0, 0.35);
-    }
-
-    .buzzer-orb:disabled,
-    .buzzer-orb.locked-orb {
-      background: radial-gradient(circle at 35% 30%, #475569 0%, #1e293b 75%, #0f172a 100%);
-      border-color: #64748b;
-      box-shadow: 0 8px 0 #090d16, 0 12px 24px rgba(0, 0, 0, 0.5);
-      cursor: not-allowed;
-    }
-
-    .confetti-piece {
-      position: fixed;
-      width: 11px;
-      height: 11px;
-      top: -12px;
-      z-index: 120;
-      pointer-events: none;
-      animation: fall linear forwards;
-    }
-
-    @keyframes fall {
-      to {
-        transform: translateY(105vh) rotate(720deg);
-      }
-    }
-
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: #0f172a; }
-    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 9999px; }
   </style>
 </head>
-<body class="flex flex-col min-h-screen">
+<body>
 
-  <!-- =====================================================================
-       1. شاشة البداية الفاخرة واختيار الوضع
-       ===================================================================== -->
-  <section id="launcherView" class="flex-1 flex flex-col items-center justify-center p-4 sm:p-8">
-    <div class="max-w-5xl w-full bg-[#111622]/95 border-2 gold-border rounded-3xl p-6 sm:p-10 shadow-2xl backdrop-blur-md">
-      <div class="text-center mb-8">
-        <div class="w-20 h-20 mx-auto rounded-3xl bg-gradient-to-br from-yellow-300 via-amber-400 to-amber-600 flex items-center justify-center shadow-[0_0_30px_rgba(245,197,66,0.4)] border-2 border-yellow-200 mb-4">
-          <span class="text-slate-950 font-black text-5xl">ح</span>
-        </div>
-        <h1 class="text-3xl sm:text-5xl font-black tracking-tight">
-          لعبة <span class="gold-gradient-text">حروف</span> التفاعلية
-        </h1>
-        <p class="text-slate-300 text-sm sm:text-base mt-2 max-w-2xl mx-auto">
-          لوحة سداسية كلاسيكية بتصميم ملكي، مؤثرات صوتية أصلية، مزامنة لحظية بين الشاشة والمقدم وجرس المتسابقين بالباركود، وأكثر من <span class="text-amber-300 font-extrabold">1,000 سؤال</span> متنوع
-        </p>
-      </div>
+  <!-- الشاشة الرئيسية -->
+  <section id="setupScreen" class="screen active">
+    <div class="setup-box">
+      <div class="brand-title">سباق الحروف</div>
+      <p class="muted">شاشة لوحة للجمهور • لوحة مقدم بالأسئلة والأجوبة • جرس متسابقين فوري وباركود QR مباشر</p>
 
-      <!-- إعداد رمز الغرفة -->
-      <div class="bg-slate-950/90 border border-amber-400/25 rounded-2xl p-4 sm:p-5 mb-7 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div>
-          <span class="text-xs sm:text-sm font-black text-amber-400 block">رمز الغرفة الموحّد للمزامنة:</span>
-          <p class="text-xs text-slate-400 mt-0.5">تأكد من استخدام نفس الرمز في شاشة اللوحة، لوحة المقدم، وجوالات اللاعبين</p>
-        </div>
-        <div class="flex items-center gap-2">
-          <input id="roomCodeInput" type="text" maxlength="6" value="2026"
-            class="w-32 text-center tracking-widest text-xl font-black bg-slate-900 border-2 border-amber-400/80 rounded-xl py-2 text-amber-300 uppercase focus:outline-none focus:border-yellow-300" />
-          <button type="button" onclick="generateRandomRoom()"
-            class="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-200 border border-slate-700 font-bold text-sm transition">
-            🎲 رمز جديد
-          </button>
+      <div class="room-bar">
+        <div class="gold" style="font-weight:800;">رمز الغرفة للمزامنة:</div>
+        <div class="room-controls">
+          <input id="setupRoomInput" class="room-input" maxlength="6" value="YAM26" />
+          <button type="button" class="btn-dark" onclick="randomizeRoom()">🎲 رمز عشوائي</button>
+          <button type="button" class="btn-gold" onclick="openQRModal()">📱 إظهار QR فوراً</button>
         </div>
       </div>
 
-      <!-- بطاقات الأوضاع الثلاثة -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-7">
-        <!-- شاشة اللوحة -->
-        <div class="bg-gradient-to-b from-slate-900 to-slate-950 border-2 border-emerald-500/40 hover:border-emerald-400 rounded-3xl p-5 flex flex-col justify-between transition shadow-xl">
-          <div>
-            <div class="flex items-center justify-between mb-3">
-              <span class="px-3 py-1 rounded-full text-xs font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                شاشة العرض الكبيرة
-              </span>
-              <span class="text-2xl">📺</span>
-            </div>
-            <h2 class="text-xl font-black text-white mb-2">شاشة اللوحة فقط</h2>
-            <p class="text-xs text-slate-300 leading-relaxed mb-4">
-              تعرض للجمهور اللوحة السداسية، النقاط، المؤقت، تنبيه الجرس، والمؤثرات الصوتية الأصلية بدون أي إجابات.
-            </p>
+      <div class="modes-grid">
+        <button type="button" class="mode-card" onclick="enterMode('board')">
+          <span class="ico">📺</span>
+          <strong>شاشة اللوحة فقط</strong>
+          <small>تُعرض على التلفزيون أو الشاشة الكبيرة بدون أسئلة</small>
+        </button>
+
+        <button type="button" class="mode-card" onclick="enterMode('host')">
+          <span class="ico">🎙️</span>
+          <strong>لوحة تحكم المقدم</strong>
+          <small>تظهر كل الأسئلة والإجابات والتحكم بالخلايا والوقت</small>
+        </button>
+
+        <button type="button" class="mode-card" onclick="enterMode('player')">
+          <span class="ico">🚨</span>
+          <strong>جرس المتسابق</strong>
+          <small>تسجيل الاسم والفريق والضغط على الجرس</small>
+        </button>
+      </div>
+
+      <div class="quick-actions">
+        <button type="button" class="btn-outline" onclick="SoundEngine.shuffle()">🔊 تجربة أصوات اللعبة الأصلية</button>
+        <button type="button" class="btn-dark" onclick="openHostAndBoard()">⚡ فتح المقدم واللوحة معاً</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 1. شاشة اللوحة فقط -->
+  <section id="boardScreen" class="screen">
+    <div class="top-hud">
+      <div class="score-pill g">
+        <span>الفريق الأخضر</span>
+        <strong id="boardGreenScore">0</strong>
+      </div>
+
+      <div class="hud-center">
+        <span class="room-pill">غرفة: <b id="boardRoomText">----</b></span>
+        <div id="boardTimer" class="timer-circle">15</div>
+        <button type="button" class="btn-gold" onclick="openQRModal()">📱 QR الجرس</button>
+        <button type="button" class="btn-dark" onclick="goHome()">🏠</button>
+      </div>
+
+      <div class="score-pill r">
+        <span>الفريق الأحمر</span>
+        <strong id="boardRedScore">0</strong>
+      </div>
+    </div>
+
+    <div id="boardBuzzAlert" class="buzz-alert hidden">
+      <span style="font-size:2rem;">🚨</span>
+      <div>
+        <div id="boardBuzzName" class="buzz-winner-name">---</div>
+        <div id="boardBuzzSub" class="buzz-winner-sub">---</div>
+      </div>
+    </div>
+
+    <div class="board-stage">
+      <div class="hex-board-shell">
+        <div class="border-top"></div>
+        <div class="border-bot"></div>
+        <div class="border-left"></div>
+        <div class="border-right"></div>
+        <div id="boardHexGrid" class="hex-rows"></div>
+      </div>
+    </div>
+
+    <div class="players-footer">
+      <div id="boardGreenRoster" class="team-chips"></div>
+      <div id="boardRedRoster" class="team-chips"></div>
+    </div>
+  </section>
+
+  <!-- 2. شاشة المقدم -->
+  <section id="hostScreen" class="screen">
+    <div class="host-top">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <strong>🎙️ لوحة المقدم</strong>
+        <span class="room-pill">غرفة: <b id="hostRoomText">----</b></span>
+        <span class="chip g">الأخضر: <b id="hostGreenScore">0</b></span>
+        <span class="chip r">الأحمر: <b id="hostRedScore">0</b></span>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button type="button" class="btn-gold" onclick="openQRModal()">📱 باركود QR</button>
+        <button type="button" class="btn-dark" onclick="launchBoardPopup()">📺 شاشة اللوحة</button>
+        <button type="button" class="btn-amber" onclick="GameEngine.newBoard()">🔄 جولة جديدة</button>
+        <button type="button" class="btn-dark" onclick="goHome()">🏠</button>
+      </div>
+    </div>
+
+    <div class="host-grid">
+      <div class="box-panel">
+        <h3>اختر حرفاً من اللوحة:</h3>
+        <div id="hostMiniGrid" class="mini-rows"></div>
+        <p class="muted">يمكنك الضغط على أي خلية لاختيارها أو تغيير لونها مباشرة.</p>
+      </div>
+
+      <div class="box-panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span>الحرف الحالي:</span>
+            <span id="hostLetterBadge" class="letter-badge">-</span>
+            <span id="hostQCounter" class="muted"></span>
           </div>
-          <div class="space-y-2">
-            <button type="button" onclick="enterMode('board')"
-              class="w-full py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-400 hover:to-green-500 text-white font-black text-sm shadow-lg transition active:scale-95">
-              فتح شاشة اللوحة ↗
-            </button>
-            <button type="button" onclick="copyModeLink('board')"
-              class="w-full py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-emerald-300 text-xs font-bold border border-slate-800 transition">
-              📋 نسخ رابط اللوحة
-            </button>
-          </div>
+          <button type="button" class="btn-outline" onclick="GameEngine.nextQuestion()">🔀 سؤال آخر لنفس الحرف</button>
         </div>
 
-        <!-- لوحة المقدم -->
-        <div class="bg-gradient-to-b from-slate-900 to-slate-950 border-2 border-amber-400/50 hover:border-yellow-300 rounded-3xl p-5 flex flex-col justify-between transition shadow-xl">
-          <div>
-            <div class="flex items-center justify-between mb-3">
-              <span class="px-3 py-1 rounded-full text-xs font-black bg-amber-400/20 text-amber-300 border border-amber-400/40">
-                تحكم المقدم الكامل
-              </span>
-              <span class="text-2xl">🎙️</span>
-            </div>
-            <h2 class="text-xl font-black text-white mb-2">لوحة تحكم المقدم</h2>
-            <p class="text-xs text-slate-300 leading-relaxed mb-4">
-              تعرض الأسئلة والإجابات (أكثر من 1,000 سؤال)، ترتيب سرعة الجرس بالميلي ثانية، تلوين الخلايا، والتحكم بالمؤقت.
-            </p>
-          </div>
-          <div class="space-y-2">
-            <button type="button" onclick="enterMode('host')"
-              class="w-full py-3 rounded-2xl bg-gradient-to-r from-yellow-300 via-amber-400 to-amber-500 hover:brightness-105 text-slate-950 font-black text-sm shadow-lg transition active:scale-95">
-              فتح لوحة المقدم ↗
-            </button>
-            <button type="button" onclick="copyModeLink('host')"
-              class="w-full py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-300 text-xs font-bold border border-slate-800 transition">
-              📋 نسخ رابط المقدم
-            </button>
-          </div>
+        <div class="qa-box">
+          <div class="muted">السؤال:</div>
+          <div id="hostQuestion" class="q-line">اختر حرفاً من اللوحة لعرض السؤال والإجابة</div>
+          <div class="muted">الإجابة الصحيحة:</div>
+          <div id="hostAnswer" class="a-line">---</div>
         </div>
 
-        <!-- جرس المتسابق -->
-        <div class="bg-gradient-to-b from-slate-900 to-slate-950 border-2 border-red-500/40 hover:border-red-400 rounded-3xl p-5 flex flex-col justify-between transition shadow-xl">
-          <div>
-            <div class="flex items-center justify-between mb-3">
-              <span class="px-3 py-1 rounded-full text-xs font-black bg-red-500/20 text-red-300 border border-red-500/40">
-                جوال المتسابق
-              </span>
-              <span class="text-2xl">🚨</span>
-            </div>
-            <h2 class="text-xl font-black text-white mb-2">شاشة جرس اللاعب</h2>
-            <p class="text-xs text-slate-300 leading-relaxed mb-4">
-              يسجل اللاعب اسمه وفريقه (أخضر أو أحمر) ويضغط الجرس بأقصى سرعة لتحديد الأسرع بدقة أجزاء الثانية.
-            </p>
-          </div>
-          <div class="space-y-2">
-            <button type="button" onclick="enterMode('player')"
-              class="w-full py-3 rounded-2xl bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-400 hover:to-rose-500 text-white font-black text-sm shadow-lg transition active:scale-95">
-              فتح جرس اللاعب ↗
-            </button>
-            <button type="button" onclick="openQRModal()"
-              class="w-full py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-300 text-xs font-bold border border-slate-800 transition">
-              📱 عرض كود QR للاعبين
-            </button>
-          </div>
+        <div class="action-grid">
+          <button type="button" class="btn-green" onclick="GameEngine.setOwner('green')">✅ نقطة للفريق الأخضر</button>
+          <button type="button" class="btn-red" onclick="GameEngine.setOwner('red')">✅ نقطة للفريق الأحمر</button>
+          <button type="button" class="btn-amber" onclick="GameEngine.passQuestion()">🔁 تحويل السؤال</button>
+          <button type="button" class="btn-dark" onclick="GameEngine.clearCell()">⬜ إزالة اللون</button>
+        </div>
+
+        <div class="timer-row">
+          <span>المؤقت: <strong id="hostTimer" class="gold">15</strong> ث</span>
+          <button type="button" class="btn-dark" onclick="GameEngine.startTimer()">▶️</button>
+          <button type="button" class="btn-dark" onclick="GameEngine.stopTimer()">⏸️</button>
+          <button type="button" class="btn-dark" onclick="GameEngine.resetTimer()">🔄</button>
         </div>
       </div>
 
-      <!-- شريط سفلي لتجربة الصوت والأسئلة -->
-      <div class="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-800 text-xs sm:text-sm">
-        <div class="flex flex-wrap items-center gap-2">
-          <button type="button" onclick="testOriginalSounds()"
-            class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold border border-amber-400/30 transition">
-            🔊 تجربة مؤثرات اللعبة الأصلية
-          </button>
-          <button type="button" onclick="openQRModal()"
-            class="px-4 py-2 rounded-xl bg-amber-400/15 hover:bg-amber-400/25 text-amber-200 font-bold border border-amber-400/40 transition">
-            📱 مولّد كود QR للجرس
-          </button>
+      <div class="box-panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+          <h3>🚨 ترتيب الجرس</h3>
+          <button type="button" class="btn-gold" onclick="GameEngine.resetBuzz()">🔓 فتح الجرس</button>
         </div>
-        <div id="questionBankStats" class="text-amber-300 font-extrabold bg-slate-950 px-3.5 py-2 rounded-xl border border-slate-800">
-          جاري إحصاء بنك الأسئلة...
+        <div id="hostBuzzList" class="buzz-list">
+          <div class="muted">لا توجد ضغطات بعد...</div>
+        </div>
+
+        <h4>المتسابقون المتصلون:</h4>
+        <div id="hostRosterList" class="roster-box">
+          <div class="muted">لا يوجد متسابقون مسجلون بعد</div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- =====================================================================
-       2. وضع شاشة اللوحة فقط (BOARD DISPLAY MODE)
-       ===================================================================== -->
-  <section id="boardOnlyView" class="hidden flex-1 flex flex-col justify-between p-3 sm:p-5">
-    <header class="max-w-6xl w-full mx-auto flex flex-wrap items-center justify-between gap-3 bg-[#111622]/95 border-2 gold-border px-4 py-2.5 rounded-2xl shadow-2xl">
-      <!-- نقاط الفريق الأخضر -->
-      <div id="boardGreenCard" class="flex items-center gap-3 px-4 py-1.5 rounded-xl border-2 border-emerald-400 bg-emerald-950/80 transition-all">
-        <span class="w-4 h-4 rounded-full bg-emerald-400 shadow-[0_0_12px_#10b981]"></span>
-        <span id="boardGreenName" class="font-black text-base sm:text-xl text-emerald-200">الفريق الأخضر</span>
-        <span id="boardGreenScore" class="font-black text-2xl sm:text-3xl text-white bg-emerald-600 px-3 py-0.5 rounded-xl shadow">0</span>
+  <!-- 3. شاشة جرس المتسابق -->
+  <section id="playerScreen" class="screen">
+    <div id="playerJoinBox" class="p-card">
+      <h2>دخول جرس المسابقة</h2>
+      <p class="muted">رقم الغرفة: <strong id="playerRoomText" class="gold">----</strong></p>
+
+      <input id="playerNameInput" class="p-input" type="text" maxlength="20" placeholder="اكتب اسمك هنا..." />
+
+      <div class="teams-pick">
+        <label id="lblGreen" class="team-radio checked-g" onclick="pickTeam('green')">
+          <input type="radio" name="pTeam" value="green" checked style="display:none;" />
+          <span>🟢 الأخضر</span>
+        </label>
+        <label id="lblRed" class="team-radio" onclick="pickTeam('red')">
+          <input type="radio" name="pTeam" value="red" style="display:none;" />
+          <span>🔴 الأحمر</span>
+        </label>
       </div>
 
-      <!-- المؤقت والغرفة -->
-      <div class="flex items-center gap-3">
-        <div class="px-3.5 py-1.5 rounded-xl bg-slate-950 border border-amber-400/40 text-xs sm:text-sm font-black text-amber-300">
-          غرفة: <span id="boardRoomBadge">2026</span>
-        </div>
-        <div id="boardBigTimer" class="w-14 h-14 rounded-2xl bg-slate-950 border-2 border-amber-400 flex items-center justify-center shadow-lg">
-          <span id="boardTimerText" class="text-2xl sm:text-3xl font-black text-amber-300">15</span>
-        </div>
-      </div>
-
-      <!-- نقاط الفريق الأحمر -->
-      <div id="boardRedCard" class="flex items-center gap-3 px-4 py-1.5 rounded-xl border-2 border-transparent bg-slate-950/70 transition-all">
-        <span id="boardRedScore" class="font-black text-2xl sm:text-3xl text-white bg-red-600 px-3 py-0.5 rounded-xl shadow">0</span>
-        <span id="boardRedName" class="font-black text-base sm:text-xl text-red-200">الفريق الأحمر</span>
-        <span class="w-4 h-4 rounded-full bg-red-500 shadow-[0_0_12px_#ef4444]"></span>
-      </div>
-    </header>
-
-    <!-- لافتة الجرس السريع على الشاشة -->
-    <div id="boardBuzzBanner" class="hidden max-w-3xl w-full mx-auto mt-3 bg-gradient-to-r from-amber-500/20 via-yellow-400/25 to-amber-500/20 border-2 border-amber-400 rounded-2xl px-5 py-3 shadow-[0_0_30px_rgba(250,204,21,0.35)]">
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <div class="flex items-center gap-3">
-          <span class="text-3xl animate-bounce">🚨</span>
-          <div>
-            <div class="text-xs font-extrabold text-amber-300">الأسرع ضغطاً على الجرس:</div>
-            <div id="boardBuzzWinnerName" class="text-xl sm:text-2xl font-black text-white">اسم اللاعب</div>
-          </div>
-        </div>
-        <div id="boardBuzzWinnerTeam" class="px-4 py-1.5 rounded-xl font-black text-sm sm:text-base bg-emerald-600 text-white shadow">
-          الفريق الأخضر
-        </div>
-      </div>
+      <button type="button" class="btn-gold full" onclick="PlayerApp.register()">دخول إلى الجرس ⚡</button>
     </div>
 
-    <!-- اللوحة السداسية المركزية -->
-    <main class="flex-1 flex flex-col items-center justify-center my-3">
-      <div class="relative w-full max-w-[760px] rounded-3xl overflow-hidden shadow-[0_25px_70px_rgba(0,0,0,0.9)] border-[6px] border-black bg-black">
-        <svg id="boardMainSvg" viewBox="0 0 700 540" class="w-full h-auto block"></svg>
-      </div>
-    </main>
-
-    <!-- شريط المتسابقين المتصلين وأزرار الشاشة -->
-    <footer class="max-w-6xl w-full mx-auto space-y-2">
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        <div class="bg-emerald-950/50 border border-emerald-500/30 rounded-xl px-3.5 py-2 flex items-center gap-2 flex-wrap">
-          <span class="text-xs font-black text-emerald-300">🟢 فريق الأخضر:</span>
-          <div id="boardGreenPlayersList" class="flex flex-wrap gap-1.5 text-xs">
-            <span class="text-slate-400">لا يوجد لاعبون بعد</span>
-          </div>
-        </div>
-        <div class="bg-red-950/50 border border-red-500/30 rounded-xl px-3.5 py-2 flex items-center gap-2 flex-wrap">
-          <span class="text-xs font-black text-red-300">🔴 فريق الأحمر:</span>
-          <div id="boardRedPlayersList" class="flex flex-wrap gap-1.5 text-xs">
-            <span class="text-slate-400">لا يوجد لاعبون بعد</span>
-          </div>
-        </div>
+    <div id="playerPadBox" class="p-pad hidden">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+        <strong id="pNameLabel">اللاعب</strong>
+        <span id="pTeamBadge" class="chip g">الأخضر</span>
       </div>
 
-      <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400 bg-[#111622]/90 px-4 py-2 rounded-xl border border-slate-800">
-        <div class="flex items-center gap-3 font-bold">
-          <span class="text-emerald-400">■ الأخضر: أعلى ↕ أسفل</span>
-          <span class="text-red-400">■ الأحمر: يمين ↔ يسار</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <button type="button" onclick="openQRModal()" class="px-3 py-1 rounded-lg bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 font-bold border border-amber-400/40">
-            📱 QR الجرس
-          </button>
-          <button type="button" onclick="toggleSound()" class="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold border border-slate-700">
-            <span class="sound-status-text">🔊 الصوت يعمل</span>
-          </button>
-          <button type="button" onclick="backToLauncher()" class="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold border border-slate-700">
-            الرئيسية
-          </button>
-        </div>
-      </div>
-    </footer>
-  </section>
+      <button id="buzzerTrigger" type="button" class="buzzer-btn"
+        onpointerdown="PlayerApp.pressBuzz()">
+        <span style="font-size:2.4rem;">🔔</span>
+        <span>اضغط للجرس!</span>
+      </button>
 
-  <!-- =====================================================================
-       3. وضع لوحة تحكم المقدم (HOST CONTROL VIEW)
-       ===================================================================== -->
-  <section id="hostControlView" class="hidden flex-1 flex flex-col">
-    <header class="bg-[#111622]/95 border-b border-amber-400/30 sticky top-0 z-30 px-3 sm:px-6 py-2.5 shadow-xl">
-      <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
-        <div class="flex items-center gap-2">
-          <span class="px-3 py-1 rounded-lg bg-gradient-to-r from-yellow-300 to-amber-500 text-slate-950 font-black text-xs">لوحة المقدم</span>
-          <span class="text-xs sm:text-sm text-slate-300 font-bold">غرفة: <b id="hostRoomBadge" class="text-amber-400">2026</b></span>
-          <span id="hostQuestionCountBadge" class="hidden sm:inline-block text-xs bg-slate-900 text-amber-200 px-2.5 py-1 rounded-lg border border-slate-700 font-bold"></span>
-        </div>
-
-        <!-- النقاط -->
-        <div class="flex items-center gap-3 bg-slate-950 px-3 py-1 rounded-xl border border-slate-800">
-          <div class="flex items-center gap-1.5">
-            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-            <span id="hostGreenNameLabel" class="text-xs font-bold text-emerald-300">الأخضر</span>
-            <button type="button" onclick="adjustScore('green', -1)" class="w-6 h-6 rounded bg-slate-800 text-slate-300 font-bold hover:bg-slate-700">-</button>
-            <span id="hostGreenScore" class="font-black text-base text-white px-1.5">0</span>
-            <button type="button" onclick="adjustScore('green', 1)" class="w-6 h-6 rounded bg-slate-800 text-slate-300 font-bold hover:bg-slate-700">+</button>
-          </div>
-          <span class="text-slate-700">|</span>
-          <div class="flex items-center gap-1.5">
-            <span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
-            <span id="hostRedNameLabel" class="text-xs font-bold text-red-300">الأحمر</span>
-            <button type="button" onclick="adjustScore('red', -1)" class="w-6 h-6 rounded bg-slate-800 text-slate-300 font-bold hover:bg-slate-700">-</button>
-            <span id="hostRedScore" class="font-black text-base text-white px-1.5">0</span>
-            <button type="button" onclick="adjustScore('red', 1)" class="w-6 h-6 rounded bg-slate-800 text-slate-300 font-bold hover:bg-slate-700">+</button>
-          </div>
-        </div>
-
-        <!-- أزرار المقدم -->
-        <div class="flex items-center gap-1.5">
-          <button type="button" onclick="openQRModal()" class="px-2.5 py-1.5 rounded-xl bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 text-xs font-extrabold border border-amber-400/40">
-            📱 QR الجرس
-          </button>
-          <button type="button" onclick="copyModeLink('board')" class="px-2.5 py-1.5 rounded-xl bg-emerald-950 hover:bg-emerald-900 text-emerald-300 text-xs font-bold border border-emerald-700/60">
-            📋 رابط اللوحة
-          </button>
-          <button type="button" onclick="toggleSound()" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-bold border border-slate-700">
-            <span class="sound-status-text">🔊</span>
-          </button>
-          <button type="button" onclick="openModal('settingsModal')" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700">
-            ⚙️
-          </button>
-          <button type="button" onclick="startNewBoard(true)" class="px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-yellow-300 text-slate-950 text-xs font-black">
-            جولة جديدة ↻
-          </button>
-        </div>
-      </div>
-    </header>
-
-    <main class="max-w-7xl w-full mx-auto p-3 sm:p-5 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-      <!-- العمود الأيمن: مصغرة اللوحة + الجرس واللاعبون -->
-      <div class="lg:col-span-5 space-y-4">
-        <div class="bg-[#111622]/95 border border-amber-400/30 rounded-3xl p-4 shadow-xl">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-extrabold text-amber-300">انقر على أي حرف لتفعيله:</span>
-            <button type="button" onclick="switchTurnManually()" class="text-xs bg-slate-800 hover:bg-slate-700 text-amber-200 px-2.5 py-1 rounded-lg border border-slate-700 font-bold">
-              تبديل الدور ⇄
-            </button>
-          </div>
-          <div id="hostTurnBanner" class="mb-3 px-3 py-2 rounded-xl bg-emerald-950/90 border border-emerald-500/50 text-center text-xs sm:text-sm font-black text-emerald-200">
-            الدور الحالي: الفريق الأخضر (أعلى ↕ أسفل)
-          </div>
-          <div class="w-full max-w-[430px] mx-auto rounded-2xl overflow-hidden border-4 border-black bg-black shadow-lg">
-            <svg id="hostMiniSvg" viewBox="0 0 700 540" class="w-full h-auto block"></svg>
-          </div>
-        </div>
-
-        <!-- صندوق الجرس الذكي واللاعبين المتصلين -->
-        <div class="bg-[#111622]/95 border border-amber-400/30 rounded-3xl p-4 shadow-xl space-y-3">
-          <div class="flex items-center justify-between">
-            <h3 class="text-sm font-black text-amber-400">🚨 ترتيب ضغط الجرس (أجزاء الثانية)</h3>
-            <button type="button" onclick="unlockBuzzer(true)" class="px-3 py-1 rounded-xl bg-amber-400 hover:bg-yellow-300 text-slate-950 text-xs font-black">
-              🔓 فتح الجرس
-            </button>
-          </div>
-
-          <div id="hostBuzzQueueList" class="bg-slate-950 border border-slate-800 rounded-2xl p-3 min-h-[92px] space-y-2 text-xs">
-            <p class="text-slate-500 text-center py-4">لم يضغط أحد على الجرس بعد...</p>
-          </div>
-
-          <div class="pt-2 border-t border-slate-800">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-xs font-black text-slate-300">المتسابقون المسجلون (<span id="hostPlayersCount">0</span>):</span>
-              <button type="button" onclick="openQRModal()" class="text-[11px] text-amber-300 underline font-bold">+ إضافة لاعب بـ QR</button>
-            </div>
-            <div id="hostPlayersGrid" class="flex flex-wrap gap-1.5 text-xs">
-              <span class="text-slate-500">لا يوجد متسابقون مسجلون</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- العمود الأيسر: السؤال والإجابة وبنك الأسئلة الشامل -->
-      <div class="lg:col-span-7 space-y-4">
-        <div class="bg-[#111622]/95 border-2 gold-border rounded-3xl p-5 shadow-2xl">
-          <div id="hostNoCellSelected" class="py-10 text-center">
-            <div class="w-16 h-16 mx-auto rounded-2xl bg-slate-900 border-2 border-amber-400/60 flex items-center justify-center text-3xl font-black text-amber-400 mb-3">
-              ؟
-            </div>
-            <h3 class="text-lg font-black text-white">اختر حرفاً من اللوحة لبدء السؤال</h3>
-            <p class="text-xs text-slate-400 mt-1">سيظهر لك السؤال والإجابة الصحيحة فوراً ويُضاء الحرف في شاشة الجمهور</p>
-          </div>
-
-          <div id="hostActiveQuestionBox" class="hidden space-y-4">
-            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
-              <div class="flex items-center gap-3">
-                <div class="w-14 h-14 rounded-2xl bg-[#fef9c3] border-4 border-amber-400 flex items-center justify-center shadow">
-                  <span id="hostActiveLetter" class="text-3xl font-black text-slate-950">أ</span>
-                </div>
-                <div>
-                  <span id="hostContestingLabel" class="px-2.5 py-1 rounded-lg text-xs font-black bg-emerald-600/30 text-emerald-300 border border-emerald-500/40">
-                    فرصة الفريق الأخضر
-                  </span>
-                  <span id="hostCategoryLabel" class="block text-xs text-slate-400 mt-1 font-bold">التصنيف: عامة</span>
-                </div>
-              </div>
-
-              <!-- المؤقت -->
-              <div class="flex items-center gap-2 bg-slate-950 px-3 py-2 rounded-2xl border border-slate-800">
-                <span id="hostTimerDisplay" class="text-2xl font-black text-amber-400 w-9 text-center">15</span>
-                <button type="button" onclick="togglePauseTimer()" id="hostPauseBtn" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-white">
-                  إيقاف
-                </button>
-                <button type="button" onclick="resetTimer(true)" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-amber-300">
-                  إعادة ↻
-                </button>
-              </div>
-            </div>
-
-            <!-- نص السؤال -->
-            <div class="bg-slate-900/95 border border-slate-700/80 rounded-2xl p-4">
-              <span class="text-xs font-bold text-amber-400 block mb-1">السؤال المطروح:</span>
-              <p id="hostQuestionText" class="text-lg sm:text-xl font-black text-white leading-relaxed"></p>
-            </div>
-
-            <!-- الإجابة الصحيحة -->
-            <div class="bg-emerald-950/60 border-2 border-emerald-500/60 rounded-2xl p-4 flex items-center justify-between gap-3">
-              <div>
-                <span class="text-xs font-bold text-emerald-300 block">الإجابة الصحيحة:</span>
-                <p id="hostAnswerText" class="text-xl sm:text-2xl font-black text-white mt-0.5"></p>
-              </div>
-              <button type="button" onclick="nextQuestionSameLetter()"
-                class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-extrabold border border-slate-600 shrink-0">
-                سؤال آخر للحرف ↻
-              </button>
-            </div>
-
-            <!-- أزرار القرار -->
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
-              <button type="button" onclick="claimCell('green')"
-                class="py-3.5 px-3 rounded-2xl bg-gradient-to-b from-emerald-500 to-emerald-700 hover:from-emerald-400 hover:to-emerald-600 text-white font-black text-sm shadow-lg transition active:scale-95">
-                ✓ إجابة الأخضر
-              </button>
-
-              <button type="button" onclick="claimCell('red')"
-                class="py-3.5 px-3 rounded-2xl bg-gradient-to-b from-red-500 to-red-700 hover:from-red-400 hover:to-red-600 text-white font-black text-sm shadow-lg transition active:scale-95">
-                ✓ إجابة الأحمر
-              </button>
-
-              <button type="button" onclick="passQuestionToOtherTeam()"
-                class="py-3.5 px-3 rounded-2xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-extrabold text-xs border border-amber-500/50 transition active:scale-95">
-                تحويل للفريق الآخر ⇄
-              </button>
-
-              <button type="button" onclick="cancelCellSelection(true)"
-                class="py-3.5 px-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-extrabold text-xs border border-slate-600 transition active:scale-95">
-                استبدال الحرف ↻
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- قائمة جميع أسئلة الحرف المختار -->
-        <div class="bg-[#111622]/95 border border-slate-800 rounded-3xl p-4 shadow-xl">
-          <div class="flex items-center justify-between mb-3">
-            <h4 class="text-sm font-black text-amber-400">أسئلة الحرف المختار (<span id="hostLetterQCount">0</span> سؤال متاح):</h4>
-            <button type="button" onclick="openModal('customQuestionModal')" class="text-xs font-bold bg-slate-800 hover:bg-slate-700 text-emerald-300 px-3 py-1 rounded-xl border border-slate-700">
-              + إضافة سؤال جديد
-            </button>
-          </div>
-          <div id="hostAllLetterQuestionsList" class="space-y-2 max-h-64 overflow-y-auto pr-1 text-xs">
-            <p class="text-slate-500">اختر حرفاً من اللوحة لعرض جميع الأسئلة والأجوبة المتوفرة له...</p>
-          </div>
-        </div>
-      </div>
-    </main>
-  </section>
-
-  <!-- =====================================================================
-       4. وضع شاشة جرس المتسابق (PLAYER BUZZER VIEW)
-       ===================================================================== -->
-  <section id="playerBuzzerView" class="hidden flex-1 flex flex-col items-center justify-center p-4">
-    <!-- نموذج تسجيل الاسم والفريق -->
-    <div id="playerJoinCard" class="max-w-md w-full bg-[#111622]/95 border-2 gold-border rounded-3xl p-6 shadow-2xl">
-      <div class="text-center mb-5">
-        <span class="px-3 py-1 rounded-full text-xs font-black bg-amber-400/20 text-amber-300 border border-amber-400/40">
-          غرفة رقم: <b id="playerRoomBadge">2026</b>
-        </span>
-        <h2 class="text-2xl font-black text-white mt-3">تسجيل الدخول للجرس</h2>
-        <p class="text-xs text-slate-400 mt-1">اكتب اسمك واختر فريقك لتظهر في الشاشة وتنافس على أسرع ضغطة</p>
-      </div>
-
-      <div class="space-y-4">
-        <div>
-          <label class="block text-xs font-bold text-amber-300 mb-1.5">اسم المتسابق</label>
-          <input id="playerNameInput" type="text" maxlength="20" placeholder="مثال: محمد العتيبي"
-            class="w-full bg-slate-950 border-2 border-slate-700 focus:border-amber-400 rounded-2xl px-4 py-3 text-white font-bold text-base focus:outline-none" />
-        </div>
-
-        <div>
-          <label class="block text-xs font-bold text-amber-300 mb-1.5">اختر فريقك</label>
-          <div class="grid grid-cols-2 gap-3">
-            <button type="button" id="pickGreenTeamBtn" onclick="selectPlayerTeam('green')"
-              class="py-3 px-3 rounded-2xl border-2 border-emerald-400 bg-emerald-950/80 text-emerald-200 font-black text-sm transition">
-              🟢 الفريق الأخضر
-            </button>
-            <button type="button" id="pickRedTeamBtn" onclick="selectPlayerTeam('red')"
-              class="py-3 px-3 rounded-2xl border-2 border-slate-700 bg-slate-900 text-slate-300 font-black text-sm transition">
-              🔴 الفريق الأحمر
-            </button>
-          </div>
-        </div>
-
-        <button type="button" onclick="joinPlayerRoom()"
-          class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-yellow-300 via-amber-400 to-amber-500 text-slate-950 font-black text-base shadow-lg hover:brightness-105 transition active:scale-95">
-          دخول إلى الجرس الآن 🚨
-        </button>
-      </div>
-    </div>
-
-    <!-- واجهة الجرس التفاعلية -->
-    <div id="playerActivePad" class="hidden max-w-md w-full bg-[#111622]/95 border-2 gold-border rounded-3xl p-6 text-center shadow-2xl">
-      <div class="flex items-center justify-between bg-slate-950/90 border border-slate-800 rounded-2xl px-4 py-2.5 mb-6">
-        <div class="text-right">
-          <span class="text-[11px] text-slate-400 block">المتسابق</span>
-          <span id="playerPadName" class="font-black text-white text-base">---</span>
-        </div>
-        <span id="playerPadTeamBadge" class="px-3 py-1 rounded-xl font-black text-xs bg-emerald-600 text-white">
-          الفريق الأخضر
-        </span>
-      </div>
-
-      <div class="flex flex-col items-center justify-center my-4">
-        <button type="button" id="playerBigBuzzerBtn" onclick="triggerPlayerBuzz()"
-          class="buzzer-orb flex flex-col items-center justify-center text-white">
-          <span class="text-4xl mb-1">🚨</span>
-          <span id="buzzerBtnTitle" class="text-xl font-black tracking-wide">اضغط الآن!</span>
-        </button>
-      </div>
-
-      <div id="playerBuzzFeedback" class="mt-6 min-h-[58px] bg-slate-950/90 border border-slate-800 rounded-2xl p-3 flex flex-col items-center justify-center">
-        <span class="text-sm font-extrabold text-amber-300">الجرس جاهز.. كن الأسرع!</span>
-        <span class="text-xs text-slate-400 mt-0.5">يتم احتساب السرعة بدقة أجزاء الثانية</span>
-      </div>
-
-      <div class="mt-5 flex items-center justify-center gap-3 text-xs">
-        <button type="button" onclick="leavePlayerRoom()" class="text-slate-400 hover:text-white underline font-bold">
-          تغيير الاسم أو الفريق
-        </button>
-        <span class="text-slate-700">|</span>
-        <button type="button" onclick="backToLauncher()" class="text-amber-400 hover:text-yellow-300 underline font-bold">
-          الشاشة الرئيسية
-        </button>
-      </div>
+      <div id="pStatusBox" class="p-status">جاهز للضغط.. كن الأسرع!</div>
+      <button type="button" class="btn-dark full" style="margin-top:12px;" onclick="PlayerApp.changeName()">تغيير الاسم / الفريق</button>
     </div>
   </section>
 
-  <!-- =====================================================================
-       5. النوافذ المنبثقة (QR Code، الفوز، الإعدادات، إضافة سؤال، تعديل خلية)
-       ===================================================================== -->
-  <!-- نافذة كود QR للاعبين -->
-  <div id="qrModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
-    <div class="bg-[#111622] border-2 border-amber-400 rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl">
-      <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
-        <h3 class="text-lg font-black text-amber-400">📱 كود QR لجرس اللاعبين</h3>
-        <button type="button" onclick="closeModal('qrModal')" class="text-slate-400 hover:text-white text-xl font-bold">✕</button>
-      </div>
-      <p class="text-xs text-slate-300 mb-3">
-        اطلب من المتسابقين مسح الباركود بكاميرا الجوال للدخول مباشرة إلى غرفة <b id="qrRoomCodeText" class="text-amber-300">2026</b>
-      </p>
+  <!-- نافذة QR المباشرة -->
+  <div id="qrModal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <button type="button" class="x-btn" onclick="closeQRModal()">✕</button>
+      <h3>باركود الجرس المباشر</h3>
+      <p class="muted">غرفة: <strong id="qrRoomCode" class="gold">----</strong></p>
 
-      <!-- حقل رابط مخصص للاختبار المحلي أو الشبكة -->
-      <div class="text-right mb-3">
-        <label class="block text-[11px] font-bold text-amber-300 mb-1">رابط الموقع الأساسي (اختياري للمعاينة أو الشبكة):</label>
-        <input id="qrCustomBaseInput" type="text" dir="ltr" placeholder="https://your-site.com/game.html"
-          oninput="renderQRCodeForCurrentRoom()"
-          class="w-full bg-slate-950 border border-slate-700 focus:border-amber-400 rounded-xl px-3 py-1.5 text-xs text-slate-200 font-mono focus:outline-none" />
+      <div class="qr-canvas-wrap">
+        <canvas id="qrCanvas" width="220" height="220"></canvas>
       </div>
 
-      <div class="bg-white p-4 rounded-2xl inline-flex items-center justify-center mx-auto shadow-inner min-w-[216px] min-h-[216px]">
-        <div id="qrcodeContainer" class="flex items-center justify-center"></div>
-      </div>
-      <div id="qrLinkPreview" dir="ltr" class="mt-3 text-[11px] text-amber-200 break-all bg-slate-950 p-2 rounded-xl border border-slate-800 font-mono"></div>
-      <div class="mt-4 flex gap-2">
-        <button type="button" onclick="copyModeLink('player')" class="flex-1 py-2.5 rounded-xl bg-amber-400 hover:bg-yellow-300 text-slate-950 font-black text-xs">
-          📋 نسخ رابط اللاعبين
-        </button>
-        <button type="button" onclick="renderQRCodeForCurrentRoom()" class="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-xs border border-slate-700">
-          ↻ تحديث
-        </button>
-        <button type="button" onclick="closeModal('qrModal')" class="py-2.5 px-3 rounded-xl bg-slate-800 text-slate-200 font-bold text-xs">
-          إغلاق
-        </button>
+      <input id="qrLinkField" class="link-box" type="text" readonly onclick="this.select()" />
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+        <button type="button" class="btn-gold" onclick="copyQRLink()">📋 نسخ الرابط</button>
+        <button type="button" class="btn-dark" onclick="openPlayerInTab()">📱 فتح صفحة الجرس</button>
       </div>
     </div>
   </div>
 
   <!-- نافذة الفوز -->
-  <div id="winModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
-    <div class="bg-[#111622] border-2 border-amber-400 rounded-3xl max-w-md w-full p-6 text-center shadow-2xl">
-      <div id="winBadgeIcon" class="w-20 h-20 mx-auto rounded-full bg-emerald-600 flex items-center justify-center text-4xl mb-4 shadow-lg border-4 border-white">
-        🏆
-      </div>
-      <h2 id="winTitle" class="text-2xl sm:text-3xl font-black text-white mb-2">مبروك للفريق الفائز!</h2>
-      <p id="winSubtitle" class="text-sm text-slate-300 mb-6 leading-relaxed"></p>
-      <div class="flex gap-3 justify-center">
-        <button type="button" onclick="closeModal('winModal'); startNewBoard(true);"
-          class="flex-1 py-3 px-4 rounded-2xl bg-gradient-to-r from-yellow-300 via-amber-400 to-amber-500 text-slate-950 font-black text-base shadow-lg">
-          جولة جديدة ↻
-        </button>
-        <button type="button" onclick="closeModal('winModal')"
-          class="py-3 px-4 rounded-2xl bg-slate-800 text-slate-200 font-bold text-sm border border-slate-700">
-          إغلاق
-        </button>
-      </div>
+  <div id="winModal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <h1 id="winHeading" style="font-size:2rem;color:var(--gold);margin-bottom:8px;">مبروك الفوز!</h1>
+      <p id="winDesc" class="muted" style="margin-bottom:18px;">تم إكمال المسار بنجاح</p>
+      <button type="button" class="btn-gold" onclick="closeWinModal()">جولة جديدة</button>
     </div>
-  </div>
-
-  <!-- نافذة تعديل خلية -->
-  <div id="editCellModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
-    <div class="bg-[#111622] border border-slate-700 rounded-3xl max-w-sm w-full p-5 text-center shadow-2xl">
-      <h3 class="text-lg font-black text-white mb-2">تعديل الخلية (<span id="editCellLetter" class="text-amber-400">أ</span>)</h3>
-      <p class="text-xs text-slate-400 mb-4">يمكنك تغيير لون الفريق أو إعادة الخلية للون الأصلي</p>
-      <div class="grid grid-cols-1 gap-2">
-        <button type="button" onclick="overrideCellOwner('green')" class="py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm">تلوين للأخضر</button>
-        <button type="button" onclick="overrideCellOwner('red')" class="py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black text-sm">تلوين للأحمر</button>
-        <button type="button" onclick="overrideCellOwner(null)" class="py-2.5 rounded-xl bg-amber-200 hover:bg-amber-100 text-slate-950 font-black text-sm">إعادة للون العاجي</button>
-        <button type="button" onclick="closeModal('editCellModal')" class="py-2 rounded-xl bg-slate-800 text-slate-300 font-bold text-xs mt-1">إلغاء</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- نافذة الإعدادات -->
-  <div id="settingsModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
-    <div class="bg-[#111622] border border-slate-700 rounded-3xl max-w-md w-full p-6 shadow-2xl">
-      <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
-        <h3 class="text-xl font-black text-white">إعدادات المسابقة</h3>
-        <button type="button" onclick="closeModal('settingsModal')" class="text-slate-400 hover:text-white text-xl font-bold">✕</button>
-      </div>
-      <div class="space-y-4 text-sm">
-        <div>
-          <label class="block text-emerald-400 font-bold mb-1">اسم الفريق الأخضر</label>
-          <input id="inputGreenName" type="text" value="الفريق الأخضر"
-            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold">
-        </div>
-        <div>
-          <label class="block text-red-400 font-bold mb-1">اسم الفريق الأحمر</label>
-          <input id="inputRedName" type="text" value="الفريق الأحمر"
-            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold">
-        </div>
-        <div>
-          <label class="block text-amber-400 font-bold mb-1">مدة المؤقت (ثوانٍ)</label>
-          <select id="inputTimerDuration" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold">
-            <option value="5">5 ثوانٍ</option>
-            <option value="10">10 ثوانٍ</option>
-            <option value="15" selected>15 ثانية</option>
-            <option value="20">20 ثانية</option>
-            <option value="30">30 ثانية</option>
-          </select>
-        </div>
-        <div class="pt-2 flex gap-2">
-          <button type="button" onclick="saveSettings()" class="flex-1 py-2.5 rounded-xl bg-amber-400 text-slate-950 font-black">حفظ التغييرات</button>
-          <button type="button" onclick="resetAllScores()" class="py-2.5 px-3 rounded-xl bg-red-950 text-red-300 border border-red-800 font-bold">تصفير النقاط</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- نافذة إضافة سؤال مخصص -->
-  <div id="customQuestionModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
-    <div class="bg-[#111622] border border-slate-700 rounded-3xl max-w-md w-full p-6 shadow-2xl">
-      <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
-        <h3 class="text-lg font-black text-amber-400">إضافة سؤال جديد للبنك</h3>
-        <button type="button" onclick="closeModal('customQuestionModal')" class="text-slate-400 hover:text-white text-xl font-bold">✕</button>
-      </div>
-      <div class="space-y-3 text-sm">
-        <div>
-          <label class="block text-slate-300 font-bold mb-1">الحرف</label>
-          <select id="customLetterSelect" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold"></select>
-        </div>
-        <div>
-          <label class="block text-slate-300 font-bold mb-1">السؤال</label>
-          <input id="customQuestionInput" type="text" placeholder="اكتب السؤال..."
-            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white">
-        </div>
-        <div>
-          <label class="block text-slate-300 font-bold mb-1">الإجابة الصحيحة</label>
-          <input id="customAnswerInput" type="text" placeholder="اكتب الإجابة..."
-            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white">
-        </div>
-        <button type="button" onclick="addCustomQuestion()" class="w-full py-2.5 rounded-xl bg-amber-400 text-slate-950 font-black mt-2">
-          حفظ السؤال
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- إشعار منبثق -->
-  <div id="toastNotification" class="fixed bottom-4 left-1/2 -translate-x-1/2 bg-slate-900 text-amber-200 border border-amber-400/80 px-4 py-2.5 rounded-2xl shadow-2xl text-xs sm:text-sm font-bold z-[110] hidden">
   </div>
 
   <script>
-    /**
-     * =========================================================================
-     * بنك الأسئلة العربي الموسّع (أكثر من 1,000 سؤال موزعة على الحروف الـ 28)
-     * يولّد لكل حرف 38 سؤالاً منوعاً ومصنفاً (عواصم، جغرافيا، علوم، تاريخ،
-     * إسلاميات، فلك، طبيعة، أدب ولغة، اختراعات، رياضة، ومعلومات عامة)
-     * بالإضافة إلى أسئلة مباشرة وحصرية لكل حرف.
-     * =========================================================================
-     */
-    const ARABIC_ALPHABET = [
-      'أ', 'ب', 'ت', 'ث', 'ج', 'ح', 'خ', 'د', 'ذ', 'ر', 'ز', 'س', 'ش', 'ص',
-      'ض', 'ط', 'ظ', 'ع', 'غ', 'ف', 'ق', 'ك', 'ل', 'م', 'ن', 'هـ', 'و', 'ي'
-    ];
-
-    const LETTER_FACTS = {
-      'أ': {
-        capitals: [['أبوظبي', 'عاصمة دولة الإمارات العربية المتحدة'], ['أديس أبابا', 'عاصمة إثيوبيا'], ['أثينا', 'عاصمة اليونان'], ['أوسلو', 'عاصمة النرويج'], ['أوتاوا', 'عاصمة كندا'], ['أنقرة', 'عاصمة تركيا']],
-        geo: [['الأمازون', 'أطول نهر في أمريكا الجنوبية من حيث غزارة المياه'], ['الأطلسي', 'ثاني أكبر محيطات العالم'], ['آسيا', 'أكبر قارات العالم مساحة وسكاناً'], ['الأنديز', 'أطول سلسلة جبال قارية في العالم'], ['إيفرست', 'أعلى قمة جبلية على سطح الأرض']],
-        islamic: [['أبو بكر الصديق', 'أول الخلفاء الراشدين ورفيق الهجرة'], ['أبو عبيدة بن الجراح', 'الصحابي الملقب بأمين هذه الأمة'], ['أحد', 'جبل يقع شمال المدينة المنورة شهد غزوة شهيرة'], ['الإسراء', 'رحلة النبي ﷺ ليلاً من المسجد الحرام إلى المسجد الأقصى']],
-        science: [['الألماس', 'أصلب الأحجار الكريمة الطبيعية'], ['الأكسجين', 'غاز ضروري للتنفس والاحتراق'], ['الأوزون', 'طبقة تحمي الأرض من الأشعة فوق البنفسجية'], ['الأمبير', 'وحدة قياس شدة التيار الكهربائي']],
-        nature: [['الأسد', 'حيوان مفترس يُلقب بملك الغابة'], ['الأرنب', 'حيوان سريع القفز ذو أذنين طويلتين'], ['الأفعى', 'زاحف لا يمتلك أطرافاً وبعض أنواعه سام'], ['الأرز', 'شجرة دائمة الخضرة رمز لبنان']]
-      },
-      'ب': {
-        capitals: [['بغداد', 'عاصمة جمهورية العراق'], ['بيروت', 'عاصمة الجمهورية اللبنانية'], ['باريس', 'عاصمة فرنسا وتشتهر ببرج إيفل'], ['برلين', 'عاصمة ألمانيا'], ['بروكسل', 'عاصمة بلجيكا ومقر الاتحاد الأوروبي'], ['بانكوك', 'عاصمة تايلاند']],
-        geo: [['باب المندب', 'مضيق يربط البحر الأحمر بخليج عدن'], ['البحر الميت', 'أخفض بقعة على سطح الأرض ويشتهر بملوحته'], ['البرازيل', 'أكبر دولة في أمريكا الجنوبية'], ['البحرين', 'مملكة خليجية تتكون من أرخبيل جزر'], ['البوسفور', 'مضيق يفصل بين الشطر الأوروبي والآسيوي لإسطنبول']],
-        islamic: [['البقرة', 'أطول سورة في القرآن الكريم'], ['بدر', 'أول غزوة كبرى في الإسلام'], ['بيت المقدس', 'أولى القبلتين وثالث الحرمين الشريفين'], ['بلال بن رباح', 'مؤذن الرسول ﷺ']],
-        science: [['البنكرياس', 'غدة في جسم الإنسان تفرز الأنسولين'], ['البوصلة', 'أداة ملاحية لتحديد الاتجاهات المغناطيسية'], ['البروتون', 'جسيم ذري يحمل شحنة موجبة'], ['البكتيريا', 'كائنات دقيقة وحيدة الخلية']],
-        nature: [['البومة', 'طائر ليلي معروف بدوران رأسه بزاوية واسعة'], ['البجع', 'طائر مائي كبير يمتلك كيساً أسفل منقاره'], ['البطريق', 'طائر لا يطير يعيش في نصف الكرة الجنوبي'], ['الباندا', 'دب يتغذى أساساً على الخيزران']]
-      },
-      'ت': {
-        capitals: [['تونس', 'عاصمة الجمهورية التونسية'], ['طوكيو (بالتاء: تيرانا)', 'عاصمة ألبانيا هي تيرانا'], ['تيرانا', 'عاصمة ألبانيا'], ['طشقند', 'عاصمة أوزبكستان'], ['تيمبو', 'عاصمة بوتان'], ['تالين', 'عاصمة إستونيا']],
-        geo: [['تركيا', 'دولة تمتد بين قارتي آسيا وأوروبا'], ['تسمانيا', 'جزيرة تقع جنوب شرق أستراليا'], ['تاهيتي', 'أكبر جزر بولينيزيا الفرنسية'], ['التبت', 'هضبة مرتفعة تُلقب بسقف العالم']],
-        islamic: [['التوبة', 'الرجوع إلى الله والاستغفار'], ['التين', 'فاكهة ذُكرت في القرآن الكريم'], ['الترتيل', 'قراءة القرآن بتأنٍ وتجويد'], ['التشهد', 'ركن أو واجب في نهاية الصلاة']],
-        science: [['التفاح', 'فاكهة ارتبطت بقصة اكتشاف الجاذبية'], ['التبخر', 'تحول السائل إلى غاز بالحرارة'], ['التلفاز', 'جهاز لنقل الصوت والصورة عن بُعد'], ['التلسكوب', 'أداة لرصد الأجرام السماوية']],
-        nature: [['التمساح', 'زاحف مفترس يعيش في المياه العذبة والمالحة'], ['التمر', 'ثمرة النخيل الشهيرة'], ['التوت', 'فاكهة صغيرة غنية بمضادات الأكسدة'], ['التنوب', 'شجرة مخروطية دائمة الخضرة']]
-      },
-      'ث': {
-        capitals: [['ثيمفو (تُكتب أحياناً بثاء)', 'عاصمة مملكة بوتان'], ['ثغر الإسكندرية (لقب مدينة)', 'مدينة ساحلية مصرية عريقة'], ['ثريا', 'نجم أو عنقود نجمي معروف في السماء'], ['ثادق', 'مدينة تاريخية في منطقة نجد بالسعودية'], ['ثرب', 'الاسم القديم للمدينة المنورة في الجاهلية'], ['ثابور', 'جبل تاريخي في فلسطين']],
-        geo: [['الثلج', 'هطول متجمد يتكون من بلورات جليدية'], ['الثالث', 'ترتيب كوكب الأرض من حيث البعد عن الشمس'], ['ثغور الشام', 'المناطق الحدودية الساحلية قديماً'], ['الثقل', 'قوة جذب الأرض للأجسام']],
-        islamic: [['الثلاثاء', 'أحد أيام الأسبوع'], ['الثقلان', 'الإنس والجن'], ['الثناء', 'المدح والشكر لله تعالى'], ['الثبات', 'التمسك بالحق عند الفتن']],
-        science: [['الثعلب', 'حيوان من الثدييات يُعرف بذكائه ومهارته في التكيف'], ['الثعبان', 'زاحف ذو جسم متطاول وبدون أرجل'], ['الثرمومتر', 'جهاز قياس درجات الحرارة'], ['الثقب الأسود', 'منطقة في الفضاء ذات جاذبية هائلة']],
-        nature: [['ثور المسك', 'حيوان قطبي ضخم ذو فراء كثيف'], ['الثوم', 'نبات عشبي معروف بخصائصه الطبية'], ['الثيل', 'نوع من الأعشاب الخضراء للملاعب والحدائق'], ['الثعلب القطبي', 'ثعلب أبيض الفراء يعيش في المناطق المتجمدة']]
-      },
-      'ج': {
-        capitals: [['جاكرتا', 'عاصمة إندونيسيا'], ['جيبوتي', 'عاصمة جمهورية جيبوتي'], ['جوبا', 'عاصمة جنوب السودان'], ['جورج تاون', 'عاصمة غيانا'], ['جدة', 'أهم مدينة ساحلية على البحر الأحمر في السعودية'], ['جنيف', 'مدينة سويسرية شهيرة بمنظماتها الدولية']],
-        geo: [['جبل طارق', 'مضيق يربط البحر الأبيض المتوسط بالمحيط الأطلسي'], ['جرينلاند', 'أكبر جزيرة في العالم'], ['الجزائر', 'أكبر دولة أفريقية من حيث المساحة'], ['جامايكا', 'جزيرة كاريبية تشتهر بموسيقى الريغي والقهوة']],
-        islamic: [['الجمعة', 'سيد الأيام عند المسلمين'], ['الجنّة', 'دار النعيم المقيم للمؤمنين'], ['الجهاد', 'بذل الجهد في سبيل الله'], ['الجمرات', 'مواضع رمي الحصى في منى']],
-        science: [['الجاذبية', 'القوة التي تجذب الأجسام نحو بعضها'], ['الجلد', 'أكبر عضو يغطي جسم الإنسان'], ['الجينات', 'وحدات الوراثة في الكائنات الحية'], ['الجلفانومتر', 'جهاز لقياس التيارات الكهربائية الضعيفة']],
-        nature: [['الجمل', 'حيوان يُلقب بسفينة الصحراء'], ['الجراد', 'حشرة تتحرك أحياناً في أسراب كبيرة'], ['الجوز', 'ثمرة غنية بالأحماض الدهنية المفيدة'], ['الجرذ', 'قارض صغير معروف بسرعة تكاثره']]
-      },
-      'ح': {
-        capitals: [['هافانا (بالحاء: حلب مدينة عريقة)', 'مدينة سورية تاريخية عريقة'], ['حائل', 'مدينة سعودية تشتهر بالكرم وجبال أجأ وسلمى'], ['حلوان', 'مدينة مصرية قديمة تشتهر بعيونها الكبريتية'], ['حماة', 'مدينة سورية تشتهر بنواعيرها'], ['حمص', 'مدينة سورية معروفة بقلعتها'], ['حيدر آباد', 'مدينة هندية تاريخية']],
-        geo: [['الحوت الأزرق', 'أضخم حيوان عاش على وجه الأرض'], ['حضرموت', 'منطقة تاريخية وجغرافية جنوب شبه الجزيرة العربية'], ['الحجاز', 'إقليم غرب المملكة العربية السعودية'], ['الهند (بحرف الحاء: المحيط الهندي)', 'ثالث أكبر محيطات العالم']],
-        islamic: [['الحج', 'الركن الخامس من أركان الإسلام'], ['الحرم', 'المسجد الحرام في مكة المكرمة'], ['حراء', 'الغار الذي نزل فيه الوحي أول مرة'], ['الحديث الشريف', 'ما أُثر عن النبي ﷺ من قول أو فعل أو تقرير']],
-        science: [['الحديد', 'عنصر فلزي رمزه Fe ويدخل في تركيب الدم'], ['الحرارة', 'شكل من أشكال الطاقة ينتقل بين الأجسام'], ['الحمض النووي', 'المادة الوراثية المسؤولة عن الصفات'], ['الحصبة', 'مرض فيروسي معدٍ يسبب طفحاً جلدياً']],
-        nature: [['الحصان', 'حيوان ارتبط بالفروسية والسباقات عبر التاريخ'], ['الحمام', 'طائر ارتبط بالسلام والمراسلة قديماً'], ['الحرير', 'ألياف طبيعية ناعمة تنتجها دودة القز'], ['الحرباء', 'سحلية تشتهر بتغير لون جلدها']]
-      },
-      'خ': {
-        capitals: [['الخرطوم', 'عاصمة جمهورية السودان'], ['خبير (خورخي مدينة)', 'مدينة في أوزبكستان'], ['خجند', 'مدينة تاريخية في طاجيكستان'], ['خورفكان', 'مدينة ساحلية إماراتية مطلة على خليج عمان'], ['خميس مشيط', 'مدينة في منطقة عسير جنوب السعودية'], ['خيبر', 'واحة تاريخية شمال المدينة المنورة']],
-        geo: [['الخليج العربي', 'مسطح مائي يقع بين شبه الجزيرة العربية وإيران'], ['خراسان', 'إقليم تاريخي واسع في آسيا'], ['الخلجان', 'أذرع بحرية تدخل في اليابسة'], ['خليج عدن', 'خليج يربط البحر الأحمر ببحر العرب']],
-        islamic: [['خالد بن الوليد', 'الصحابي الملقب بسيف الله المسلول'], ['خديجة بنت خويلد', 'أم المؤمنين وأول من آمن من النساء'], ['الخشوع', 'حضور القلب وسكون الجوارح في الصلاة'], ['الخطبة', 'الكلمة الوعظية مثل خطبة الجمعة']],
-        science: [['الخارصين', 'عنصر كيميائي يُعرف أيضاً بالزنك ورمزه Zn'], ['الخلية', 'الوحدة الأساسية لبناء الكائنات الحية'], ['الخفاش', 'الثديي الوحيد القادر على الطيران الحقيقي'], ['الخصوبة', 'قدرة التربة على دعم نمو النباتات']],
-        nature: [['الخوخ', 'فاكهة صيفية ذات قشرة مخملية'], ['الخيزران', 'نبات سريع النمو وتفضله دببة الباندا'], ['الخشب', 'مادة طبيعية تُستخرج من جذوع الأشجار'], ['الخروف', 'حيوان داجن يُربى للصوف واللحم']]
-      },
-      'د': {
-        capitals: [['دمشق', 'عاصمة الجمهورية العربية السورية'], ['الدوحة', 'عاصمة دولة قطر'], ['دبلن', 'عاصمة جمهورية أيرلندا'], ['داكار', 'عاصمة السنغال'], ['دكا', 'عاصمة بنغلاديش'], ['دبي', 'إمارة ومدينة عالمية في الإمارات']],
-        geo: [['الدنمارك', 'دولة أوروبية تضم شبه جزيرة يوتلاند وعدداً من الجزر'], ['الدلتا', 'أرض مثلثة تتكون عند مصب الأنهار'], ['دارفور', 'إقليم يقع غرب السودان'], ['دجلة', 'أحد النهرين العظيمين في العراق مع الفرات']],
-        islamic: [['الدعاء', 'عبادة عظيمة وهي سؤال الله والتضرع إليه'], ['الديّن', 'منهج حياة شامل أنزله الله لهداية البشر'], ['داوود عليه السلام', 'نبي وملك أُوتي الزبور وأُلّين له الحديد'], ['الدرع', 'لباس واقٍ يُرتدى في الحروب قديماً']],
-        science: [['الدماغ', 'المركز الرئيسي للجهاز العصبي في جسم الإنسان'], ['الدلفين', 'ثديي بحري ذكي يُصدر موجات صوتية'], ['الدينامو', 'جهاز يحول الطاقة الميكانيكية إلى كهربائية'], ['الدورة الدموية', 'حركة الدم في القلب والأوعية الدموية']],
-        nature: [['الديك', 'ذكر الدجاج المعروف بصياحه صباحاً'], ['الدب', 'حيوان ثديي كبير يعيش في غابات وجبال متعددة'], ['الدراق', 'اسم آخر يُطلق على الخوخ في بعض المناطق'], ['الدلب', 'شجرة ضخمة معمرة ذات أوراق مفصصة']]
-      },
-      'ذ': {
-        capitals: [['ذمار', 'مدينة يمنية تاريخية تقع جنوب صنعاء'], ['ذو الحجة', 'الشهر الثاني عشر من الأشهر الهجرية'], ['ذو القعدة', 'الشهر الحادي عشر من الأشهر الهجرية'], ['ذوق مصبح', 'مدينة ساحلية لبنانية'], ['ذيبان', 'مدينة أردنية تاريخية'], ['ذهبان', 'منطقة ساحلية شمال جدة']],
-        geo: [['الذهب', 'معدن نفيس أصفر اللون رمزه Au'], ['الذرة', 'أصغر وحدة في المادة تحتفظ بخصائص العنصر'], ['ذات النطاقين', 'لقب الصحابية أسماء بنت أبي بكر رضي الله عنها'], ['ذو القرنين', 'ملك صالح ذُكر في القرآن الكريم']],
-        islamic: [['الذكر', 'تسبيح الله وتحميده وتكبيره واستغفاره'], ['ذو النورين', 'لقب الخليفة الراشد عثمان بن عفان رضي الله عنه'], ['الذبيح', 'لقب سيدنا إسماعيل عليه السلام'], ['الذكات', 'الذبح الشرعي أو الطهارة والنماء']],
-        science: [['الذرة', 'تتكون من نواة تضم بروتونات ونيوترونات وتدور حولها إلكترونات'], ['الذوبان', 'امتزاج مادة في مذيب لتكوين محلول'], ['الذبذبة', 'حركة اهتزازية تتكرر بانتظام'], ['الذوق', 'حاسة تُميز الطعوم عبر براعم اللسان']],
-        nature: [['الذئب', 'حيوان مفترس من فصيلة الكلبيات'], ['الذرة (النبات)', 'محصول زراعي يُصنع منه الدقيق والزيت'], ['الذبابة', 'حشرة ذات جناحين'], ['الذئب الرمادي', 'أكبر أنواع الذئاب البرية']]
-      },
-      'ر': {
-        capitals: [['الرياض', 'عاصمة المملكة العربية السعودية'], ['روما', 'عاصمة إيطاليا'], ['الرباط', 'عاصمة المملكة المغربية'], ['ريكيافيك', 'عاصمة أيسلندا'], ['ريغا', 'عاصمة لاتفيا'], ['رأس الخيمة', 'إمارة في دولة الإمارات العربية المتحدة']],
-        geo: [['روسيا', 'أكبر دول العالم من حيث المساحة'], ['الربع الخالي', 'أكبر صحراء رملية متصلة في العالم'], ['الراين', 'نهر أوروبي مهم يمر بعدة دول'], ['رأس الرجاء الصالح', 'رأس بحري يقع قرب الطرف الجنوبي لأفريقيا']],
-        islamic: [['رمضان', 'الشهر التاسع في التقويم الهجري وشهر الصوم'], ['الركوع', 'انحناء المصلي في صلاته تعظيماً لله'], ['الرسول', 'نبي أرسله الله بشرع جديد إلى قومه'], ['الرحمن', 'من أسماء الله الحسنى الدالة على سعة الرحمة']],
-        science: [['الرئة', 'العضو المسؤول عن تبادل الغازات والتنفس'], ['الرادار', 'نظام يستخدم الموجات الكهرومغناطيسية لكشف الأجسام'], ['الروبوت', 'آلة قابلة للبرمجة لأداء مهام تلقائية'], ['الرنين', 'اهتزاز جسم بتأثير تردد موافق لتردده الطبيعي']],
-        nature: [['الرمان', 'فاكهة ذات قشرة حمراء وحبوب ياقوتية'], ['الريم', 'نوع من الغزلان الرشيقة'], ['الريحان', 'نبات عشبي ذو رائحة عطرية زكية'], ['الرخم', 'طائر جارح من فصيلة الصقريات']]
-      },
-      'ز': {
-        capitals: [['زغرب', 'عاصمة كرواتيا'], ['زنجبار', 'أرخبيل وجزيرة شهيرة تتبع تنزانيا'], ['زيورخ', 'أكبر مدينة في سويسرا'], ['الزرقاء', 'مدينة أردنية معروفة'], ['زليتن', 'مدينة ساحلية في ليبيا'], ['زحلة', 'مدينة لبنانية شهيرة في البقاع']],
-        geo: [['زحل', 'الكوكب السادس من الشمس والمشهور بحلقاته'], ['الزهرة', 'أقرب الكواكب إلى الأرض وأكثرها حرارة'], ['زامبيا', 'دولة في جنوب أفريقيا'], ['زيمبابوي', 'دولة أفريقية تشتهر بشلالات فيكتوريا']],
-        islamic: [['الزكاة', 'الركن الثالث من أركان الإسلام'], ['الزيتون', 'شجرة مباركة ذُكرت في القرآن الكريم'], ['الزمزم', 'بئر مباركة في المسجد الحرام بمكة'], ['الزهد', 'الإعراض عما يشغل عن الله والآخرة']],
-        science: [['الزنك', 'عنصر كيميائي يُعرف أيضاً بالخارصين'], ['الزجاج', 'مادة صلبة شفافة غالباً وتُصنع من السيليكا'], ['الزلازل', 'اهتزازات أرضية ناتجة عن تحرر طاقة في القشرة الأرضية'], ['الزئبق', 'فلز سائل في درجة الحرارة العادية']],
-        nature: [['الزرافة', 'أطول حيوان بري على وجه الأرض'], ['الزعفران', 'أغلى التوابل ويُستخرج من زهرة الزعفران'], ['الزنبق', 'زهرة جميلة ذات ألوان متعددة'], ['الزرزور', 'طائر صغير يطير غالباً في أسراب كثيفة']]
-      },
-      'س': {
-        capitals: [['سيول', 'عاصمة كوريا الجنوبية'], ['سنغافورة', 'دولة ومدينة آسيوية متقدمة'], ['ستوكهولم', 'عاصمة السويد'], ['صوفيا (بالسين: سان خوسيه)', 'عاصمة كوستاريكا'], ['سراييفو', 'عاصمة البوسنة والهرسك'], ['سانتياغو', 'عاصمة تشيلي']],
-        geo: [['السعودية', 'أكبر دول شبه الجزيرة العربية مساحة'], ['سوريا', 'دولة عربية تقع في شرق البحر الأبيض المتوسط'], ['السودان', 'دولة عربية تقع في شمال شرق أفريقيا'], ['سيناء', 'شبه جزيرة مصرية تربط آسيا بأفريقيا']],
-        islamic: [['السجود', 'وضع الجبهة والأنف على الأرض تعظيماً لله'], ['السنة النبوية', 'ما ورد عن النبي ﷺ من قول أو فعل أو تقرير'], ['السحور', 'الأكل والشرب قبل الفجر للصائم'], ['السبع المثاني', 'لقب سورة الفاتحة']],
-        science: [['السمع', 'حاسة إدراك الأصوات عبر الأذن'], ['السرعة', 'المسافة المقطوعة خلال وحدة الزمن'], ['السيليكون', 'شبه فلز يدخل في صناعة الرقائق الإلكترونية'], ['السديم', 'سحابة كونية من الغاز والغبار في الفضاء']],
-        nature: [['السلحفاة', 'زاحف يتميز بدرع واقٍ على ظهره'], ['السنجاب', 'حيوان قارض سريع الحركة يعيش غالباً على الأشجار'], ['السرو', 'شجرة مخروطية طويلة ومستقيمة'], ['السمك', 'فقاريات مائية تتنفس غالباً بالخياشيم']]
-      },
-      'ش': {
-        capitals: [['الشارقة', 'إمارة في دولة الإمارات تُلقب بعاصمة الثقافة'], ['شرم الشيخ', 'مدينة مصرية ساحلية على البحر الأحمر'], ['شيكاغو', 'مدينة أمريكية كبرى على بحيرة ميشيغان'], ['شيرآز', 'مدينة إيرانية تاريخية'], ['شفاعمرو', 'مدينة في الجليل'], ['شنغهاي', 'أكبر مدينة صينية من حيث عدد السكان']],
-        geo: [['الشمس', 'النجم المركزي للمجموعة الشمسية'], ['الشمال', 'أحد الاتجاهات الأصلية الأربعة'], ['شبه الجزيرة العربية', 'منطقة جغرافية في جنوب غرب آسيا'], ['شلالات نياغارا', 'شلالات شهيرة بين الولايات المتحدة وكندا']],
-        islamic: [['الشهادة', 'شهادة أن لا إله إلا الله وأن محمداً رسول الله'], ['الشورى', 'مبدأ التشاور وتبادل الرأي في اتخاذ القرار'], ['الشفاعة', 'التوسط للغير بالخير بإذن الله'], ['الشهر الحرام', 'أشهر معظمة في الإسلام كرجب وذي القعدة وذي الحجة والمحرم']],
-        science: [['الشغل', 'في الفيزياء هو ناتج القوة في الإزاحة باتجاهها'], ['الشبكية', 'طبقة حساسة للضوء في مؤخرة العين'], ['الشحن الكهربائي', 'خاصية فيزيائية للمادة تسبب قوى كهرومغناطيسية'], ['الشعيرات الدموية', 'أدق الأوعية الدموية لتبادل المواد']],
-        nature: [['الشاهين', 'نوع من الصقور السريعة جداً'], ['الشقائق', 'نباتات زهرية برية مثل شقائق النعمان'], ['الشيح', 'نبات صحراوي ذو رائحة مميزة'], ['الشوفان', 'حبوب غذائية مفيدة']]
-      },
-      'ص': {
-        capitals: [['صنعاء', 'عاصمة الجمهورية اليمنية'], ['صوفيا', 'عاصمة بلغاريا'], ['صلالة', 'مدينة عمانية ساحلية تشتهر بالخريف'], ['صور', 'مدينة ساحلية تاريخية في لبنان'], ['صيدا', 'مدينة ساحلية لبنانية عريقة'], ['صفاقس', 'مدينة ساحلية تونسية']],
-        geo: [['الصين', 'دولة آسيوية كبرى من حيث السكان والمساحة'], ['الصحراء الكبرى', 'أكبر صحراء حارة في العالم'], ['الصومال', 'دولة عربية تقع في القرن الأفريقي'], ['صربيا', 'دولة في جنوب شرق أوروبا']],
-        islamic: [['الصلاة', 'الركن الثاني من أركان الإسلام'], ['الصيام', 'الركن الرابع من أركان الإسلام'], ['الصحابة', 'من لقي النبي ﷺ مؤمناً به ومات على الإسلام'], ['الصدقة', 'ما يُبذل من مال أو خير تقرباً إلى الله']],
-        science: [['الصوت', 'موجات ميكانيكية تحتاج إلى وسط مادي للانتقال'], ['الصفر', 'العدد الذي يمثل غياب الكمية في النظام العددي'], ['الصخور النارية', 'صخور تتكون من تبريد وتصلب الصهارة'], ['الصمام', 'أداة تتحكم في اتجاه أو معدل سريان الموائع']],
-        nature: [['الصقر', 'طائر جارح معروف بسرعة انقضاضه وبصره الحاد'], ['الصبار', 'نبات عصاري يتكيف مع البيئات الجافة'], ['الصرصور', 'حشرة معروفة بقدرتها العالية على التحمل'], ['الصنوبر', 'شجرة مخروطية تنتج بذوراً داخل مخاريط']]
-      },
-      'ض': {
-        capitals: [['ضباء', 'مدينة ساحلية سعودية على البحر الأحمر'], ['ضاحية السيف', 'منطقة في البحرين'], ['ضمد', 'محافظة في منطقة جازان بالسعودية'], ['ضنّا', 'منطقة في دولة الإمارات'], ['ضواحي دمشق', 'محافظة محيطة بدمشق'], ['ضريّة', 'حمى تاريخية شهيرة في نجد']],
-        geo: [['الضباب', 'سحابة منخفضة قريبة من سطح الأرض'], ['الضفة الغربية', 'منطقة جغرافية في فلسطين'], ['الضفة الشرقية', 'الضفة المقابلة للأنهار أو الوديان'], ['الضوء', 'إشعاع كهرومغناطيسي يمكن رؤيته بالعين']],
-        islamic: [['الضحى', 'صلاة نافلة تُؤدى بعد شروق الشمس وارتفاعها'], ['الضمان', 'الالتزام بأداء حق أو تعويض في الفقه'], ['الضرورة', 'حالة تبيح المحظورات بقدرها في القواعد الفقهية'], ['الضيافة', 'إكرام الضيف من أبرز مكارم الأخلاق']],
-        science: [['الضوء', 'ينتقل في الفراغ بسرعة تقارب 300 ألف كيلومتر في الثانية'], ['الضغط الجوي', 'وزن عمود الهواء المؤثر على وحدة المساحة'], ['الضغط الدموي', 'قوة دفع الدم على جدران الشرايين'], ['الضوضاء', 'أصوات غير منتظمة أو مزعجة']],
-        nature: [['الضفدع', 'حيوان برمائي يقفز ويستطيع العيش في الماء واليابسة'], ['الضبع', 'حيوان مفترس يعيش في أفريقيا وآسيا'], ['الضب', 'زاحف صحراوي يعيش في جحور'], ['الضرم', 'نبات عطري بري']]
-      },
-      'ط': {
-        capitals: [['طوكيو', 'عاصمة اليابان'], ['طهران', 'عاصمة إيران'], ['طرابلس', 'عاصمة ليبيا (وهي أيضاً مدينة لبنانية عريقة)'], ['طشقند', 'عاصمة أوزبكستان'], ['طنجة', 'مدينة مغربية مطلة على مضيق جبل طارق'], ['الطائف', 'مدينة سعودية تشتهر بأجوائها المعتدلة والورد']],
-        geo: [['طبرية', 'بحيرة عذبة تقع في فلسطين'], ['طور سيناء', 'منطقة جبلية في شبه جزيرة سيناء'], ['طاجيكستان', 'دولة في آسيا الوسطى'], ['طرابزون', 'مدينة ساحلية تركية على البحر الأسود']],
-        islamic: [['الطهارة', 'النظافة والرفع للحدث والنجاسة'], ['الطواف', 'الدوران حول الكعبة المشرفة سبعة أشواط'], ['طارق بن زياد', 'القائد المسلم الذي قاد فتح الأندلس'], ['الطلاق', 'حل رابطة الزواج وفق أحكام الشريعة']],
-        science: [['الطاقة', 'القدرة على بذل شغل أو إحداث تغيير'], ['الطحالب', 'كائنات حية شبيهة بالنباتات تعيش غالباً في الماء'], ['الطباعة', 'تقنية نسخ النصوص والصور على الورق أو غيره'], ['الطيف', 'توزع الضوء حسب أطواله الموجية']],
-        nature: [['الطاووس', 'طائر يشتهر بريش ذيله الملون الجميل'], ['الطائر', 'حيوان فقاري يمتلك ريشاً ومعظمه يطير'], ['الطلح', 'شجرة صحراوية من فصيلة السنط'], ['الطماطم', 'نبات ثمره شائع في الطهي والسلطات']]
-      },
-      'ظ': {
-        capitals: [['ظفار', 'محافظة عمانية جنوبية عاصمتها صلالة'], ['الظهران', 'مدينة سعودية في المنطقة الشرقية'], ['ظلم', 'مركز تاريخي في منطقة مكة المكرمة'], ['الظفرة', 'منطقة واسعة في إمارة أبوظبي'], ['ظبيان', 'اسم يرتبط بالظباء في الأدب العربي'], ['ظليل', 'مكان ذو ظل وافر']],
-        geo: [['الظل', 'منطقة يقل فيها الضوء بسبب حاجز يعترض أشعته'], ['الظلام', 'غياب الضوء أو انخفاضه الشديد'], ['الظواهر الجوية', 'الأحداث الطبيعية في الغلاف الجوي كالمطر والرياح'], ['الظاهرة', 'كل أمر محسوس أو ملحوظ في الطبيعة']],
-        islamic: [['الظهر', 'صلاة الظهر وهي أربع ركعات'], ['الظهار', 'لفظ كان يُستعمل في الجاهلية لتحريم الزوجة'], ['الظن', 'ترجيح أحد أمرين محتملين'], ['الظفر بالخير', 'الفوز والنجاح في الطاعة']],
-        science: [['الظفر', 'صفيحة قرنية صلبة تحمي أطراف الأصابع'], ['الظاهرة الكهروضوئية', 'انبعاث إلكترونات عند سقوط ضوء على معدن'], ['الظروف القياسية', 'شروط مرجعية لقياس الغازات والتفاعلات'], ['الظهور الفلكي', 'بداية ظهور جرم سماوي بعد احتجابه']],
-        nature: [['الظبي', 'حيوان رشيق وسريع من فصيلة البقريات'], ['الظبية', 'أنثى الظبي أو الغزال'], ['الظلف', 'طرف القدم المشقوق في بعض ذوات الحوافر'], ['الظباء', 'جمع ظبي وهي حيوانات عشبية سريعة']]
-      },
-      'ع': {
-        capitals: [['عمّان', 'عاصمة المملكة الأردنية الهاشمية'], ['أبوظبي (عمان الشقيقة مسقط)', 'عاصمة سلطنة عمان هي مسقط'], ['عشق آباد', 'عاصمة تركمانستان'], ['عنابة', 'مدينة ساحلية جزائرية'], ['عجمان', 'إمارة في دولة الإمارات العربية المتحدة'], ['عنتيبي', 'مدينة أوغندية على بحيرة فيكتوريا']],
-        geo: [['عُمان', 'دولة عربية تقع في جنوب شرق شبه الجزيرة العربية'], ['العراق', 'دولة عربية يمر بها نهرا دجلة والفرات'], ['القطب الشمالي (عكس الجنوبي)', 'أقصى نقطة شمال الأرض'], ['عدن', 'مدينة ساحلية يمنية تاريخية']],
-        islamic: [['العمرة', 'زيارة البيت الحرام لأداء مناسك مخصوصة في أي وقت'], ['العيد', 'يوم فرح وسرور للمسلمين كعيد الفطر والأضحى'], ['عثمان بن عفان', 'ثالث الخلفاء الراشدين'], ['العصر', 'صلاة العصر وهي أربع ركعات']],
-        science: [['العين', 'عضو الإبصار الذي يستقبل الضوء ويكوّن الصور'], ['العصب', 'حزمة من الألياف تنقل الإشارات العصبية'], ['العنصر', 'مادة نقية تتكون من نوع واحد من الذرات'], ['العدسة', 'جسم شفاف يكسر الضوء لتكوين صورة']],
-        nature: [['العسل', 'مادة حلوة ينتجها النحل من رحيق الأزهار'], ['العنكبوت', 'مفصلي ذو ثمانية أرجل ينسج خيوطاً'], ['العصفور', 'طائر مغرد صغير الحجم'], ['العرعر', 'شجرة دائمة الخضرة تتحمل الجفاف']]
-      },
-      'غ': {
-        capitals: [['غزة', 'مدينة ساحلية في فلسطين'], ['غوادالاخارا', 'مدينة مكسيكية شهيرة'], ['غلاسكو', 'أكبر مدينة في اسكتلندا'], ['غدانسك', 'مدينة ساحلية بولندية'], ['غينيا (عاصمتها كوناكري)', 'دولة في غرب أفريقيا'], ['غابورون', 'عاصمة بوتسوانا']],
-        geo: [['غانا', 'دولة في غرب أفريقيا'], ['غرناطة', 'مدينة أندلسية تاريخية في إسبانيا'], ['الغابة', 'مساحة واسعة تغطيها الأشجار الكثيفة'], ['الغلاف الجوي', 'طبقة الغازات المحيطة بكوكب الأرض']],
-        islamic: [['الغار', 'كهف في الجبل مثل غار حراء وغار ثور'], ['الغسل', 'تعميم الجسد بالماء الطهور بنية الطهارة'], ['الغفران', 'ستر الذنب والتجاوز عنه من الله'], ['الغزوة', 'المعركة التي حضرها النبي ﷺ بنفسه']],
-        science: [['الغليان', 'تحول السائل إلى غاز عند درجة حرارة معينة'], ['الغاز', 'حالة من حالات المادة ينتشر فيها الجسيمات بحرية'], ['الغدة الدرقية', 'غدة في الرقبة تفرز هرمونات تنظم الأيض'], ['الغبار الكوني', 'جسيمات دقيقة منتشرة في الفضاء']],
-        nature: [['الغزال', 'حيوان رشيق وسريع يُضرب به المثل في الجمال'], ['الغراب', 'طائر أسود اللون معروف بذكائه'], ['الغوريلا', 'أكبر أنواع الرئيسيات حجماً'], ['الغرنوق', 'طائر مائي طويل الساقين والمنقار']]
-      },
-      'ف': {
-        capitals: [['فيينا', 'عاصمة النمسا'], ['فارسو (وارسو)', 'عاصمة بولندا'], ['فكتوريا', 'عاصمة سيشل'], ['فريتاون', 'عاصمة سيراليون'], ['الفجيرة', 'إمارة في دولة الإمارات على خليج عمان'], ['فاس', 'مدينة مغربية تاريخية عريقة']],
-        geo: [['فرنسا', 'دولة أوروبية عاصمتها باريس'], ['فلسطين', 'أرض عربية مقدسة على البحر المتوسط'], ['الفرات', 'نهر كبير يلتقي بدجلة ليكوّنا شط العرب'], ['فلوريدا', 'شبه جزيرة وولاية في جنوب شرق أمريكا']],
-        islamic: [['الفجر', 'صلاة الفجر وهي ركعتان'], ['الفاتحة', 'السورة الأولى في المصحف الشريف'], ['الفاروق', 'لقب الخليفة الراشد عمر بن الخطاب رضي الله عنه'], ['الفطرة', 'الخلقة السليمة التي فُطر الناس عليها']],
-        science: [['الفيزياء', 'العلم الذي يدرس المادة والطاقة والحركة'], ['الفقاريات', 'حيوانات تمتلك عموداً فقرياً'], ['الفيروس', 'عامل ممرض متناهٍ في الصغر يتكاثر داخل الخلايا'], ['الفولت', 'وحدة قياس فرق الجهد الكهربائي']],
-        nature: [['الفيل', 'أكبر حيوان بري يعيش على اليابسة'], ['الفهد', 'أسرع حيوان بري في العالم'], ['الفراشة', 'حشرة ذات أجنحة ملونة تمر بطور اليرقة'], ['الفجل', 'نبات جذري معروف بطعمه اللاذع']]
-      },
-      'ق': {
-        capitals: [['القاهرة', 'عاصمة جمهورية مصر العربية'], ['القدس', 'عاصمة فلسطين التاريخية ومسرى النبي ﷺ'], ['كييف (بالقاف: قازان مدينة)', 'مدينة روسية عريقة في تتارستان'], ['قندهار', 'مدينة في جنوب أفغانستان'], ['قسنطينة', 'مدينة جزائرية تُعرف بمدينة الجسور المعلقة'], ['القيروان', 'مدينة تاريخية في تونس']],
-        geo: [['قطر', 'دولة عربية خليجية عاصمتها الدوحة'], ['القمر', 'التابع الطبيعي الوحيد لكوكب الأرض'], ['قبرص', 'جزيرة في شرق البحر الأبيض المتوسط'], ['قارة أفريقيا', 'ثاني أكبر قارات العالم مساحة وسكاناً']],
-        islamic: [['القرآن الكريم', 'كتاب الله المنزل على النبي محمد ﷺ'], ['القبلة', 'الاتجاه الذي يتوجه إليه المسلمون في الصلاة'], ['القيام', 'صلاة الليل أو الوقوف في الصلاة'], ['القضاء والقدر', 'الإيمان بتقدير الله للأشياء بعلمه وحكمته']],
-        science: [['القلب', 'العضو العضلي الذي يضخ الدم إلى أنحاء الجسم'], ['القوة', 'مؤثر يغير حالة الجسم الحركية أو شكله'], ['القوس والنشاب', 'أداة قديمة للرمي والقنص'], ['القياس', 'مقارنة كمية مجهولة بأخرى معيارية']],
-        nature: [['القهوة', 'مشروب شهير يُحضّر من حبوب البن المحمصة'], ['القنفذ', 'حيوان صغير مغطى بالأشواك للدفاع عن نفسه'], ['القندس', 'حيوان قارض مائي يبني سدوداً من الأغصان'], ['القمح', 'محصول حبوبي أساسي لصناعة الخبز']]
-      },
-      'ك': {
-        capitals: [['الكويت', 'عاصمة دولة الكويت'], ['كوبنهاغن', 'عاصمة الدنمارك'], ['كوالالمبور', 'عاصمة ماليزيا'], ['كابل', 'عاصمة أفغانستان'], ['كمبالا', 'عاصمة أوغندا'], ['كراتشي', 'أكبر مدينة باكستانية']],
-        geo: [['كندا', 'دولة في أمريكا الشمالية واسعة المساحة'], ['كينيا', 'دولة في شرق أفريقيا'], ['كوبا', 'دولة جزرية في البحر الكاريبي'], ['كازاخستان', 'دولة كبرى في آسيا الوسطى']],
-        islamic: [['الكعبة المشرفة', 'البيت الحرام وقبلة المسلمين في مكة المكرمة'], ['الكوثر', 'نهر أو خير كثير في الجنة وسورة قرآنية'], ['الكفارة', 'ما يُؤدى لجبر خطأ أو مخالفة شرعية'], ['الكرام الكاتبون', 'ملائكة تكتب أعمال العباد']],
-        science: [['الكبد', 'أكبر عضو داخلي في جسم الإنسان'], ['الكهرباء', 'ظاهرة فيزيائية مرتبطة بالشحنات الكهربائية'], ['الكيمياء', 'العلم الذي يدرس تركيب المادة وتفاعلاتها'], ['الكيلومتر', 'وحدة قياس طول تساوي ألف متر']],
-        nature: [['الكنغر', 'حيوان أسترالي مشهور بالقفز وحمل صغاره في جراب'], ['الكلب', 'حيوان داجن من فصيلة الكلبيات'], ['الكركديه', 'نبات يُحضّر من أزهاره مشروب معروف'], ['الكستناء', 'ثمرة شجرية تُشوى أو تُسلق']]
-      },
-      'ل': {
-        capitals: [['لندن', 'عاصمة المملكة المتحدة'], ['لشبونة', 'عاصمة البرتغال'], ['ليما', 'عاصمة بيرو'], ['لوكسمبورغ', 'عاصمة دوقية لوكسمبورغ'], ['ليبرفيل', 'عاصمة الغابون'], ['ليلونغوي', 'عاصمة مالاوي']],
-        geo: [['لبنان', 'دولة عربية تطل على البحر الأبيض المتوسط'], ['ليبيا', 'دولة عربية تقع في شمال أفريقيا'], ['لابلاند', 'إقليم شمالي يمتد عبر دول الشمال الأوروبي'], ['لوزون', 'أكبر جزر الفلبين']],
-        islamic: [['ليلة القدر', 'ليلة مباركة في العشر الأواخر من رمضان خير من ألف شهر'], ['اللباس', 'ما يستر بدن الإنسان ويزينه'], ['اللعان', 'حكم شرعي معروف في باب النكاح'], ['اللفظ', 'ما يتلفظ به الإنسان من كلام']],
-        science: [['اللسان', 'عضو عضلي في الفم يساعد في الكلام والتذوق والبلع'], ['الليزر', 'ضوء مركز عالي الاتجاهية والنقاء'], ['اللافقاريات', 'حيوانات لا تمتلك عموداً فقرياً'], ['اللزوجة', 'مقاومة المائع للتدفق والانسياب']],
-        nature: [['الليمون', 'ثمرة حمضية غنية بفيتامين C'], ['اللؤلؤ', 'مادة صلبة لامعة تتكون داخل بعض الرخويات'], ['اللقلق', 'طائر مهاجر طويل المنقار والساقين'], ['اللوز', 'شجرة مثمرة وبذورها غذائية شهيرة']]
-      },
-      'م': {
-        capitals: [['مدريد', 'عاصمة إسبانيا'], ['موسكو', 'عاصمة روسيا'], ['مسقط', 'عاصمة سلطنة عُمان'], ['مقديشو', 'عاصمة الصومال'], ['مانيلا', 'عاصمة الفلبين'], ['مكسيكو سيتي', 'عاصمة المكسيك']],
-        geo: [['مصر', 'دولة عربية في شمال شرق أفريقيا'], ['المغرب', 'دولة عربية في أقصى شمال غرب أفريقيا'], ['موريتانيا', 'دولة عربية في غرب أفريقيا'], ['المشتري', 'أكبر كواكب المجموعة الشمسية']],
-        islamic: [['مكة المكرمة', 'أحب بقاع الأرض إلى الله وفيها المسجد الحرام'], ['المدينة المنورة', 'طيبة الطيبة ومهاجر النبي ﷺ'], ['المحرم', 'الشهر الأول من السنة الهجرية'], ['المسجد الأقصى', 'المسجد المبارك في القدس']],
-        science: [['المغناطيس', 'جسم يجذب المواد المغناطيسية كالحديد'], ['المجهر', 'أداة لتكبير الأجسام الدقيقة'], ['المتر', 'الوحدة الأساسية لقياس الطول في النظام الدولي'], ['الموجة', 'اضطراب ينتقل حاملاً الطاقة']],
-        nature: [['الماء', 'سائل الحياة الأساسي على سطح الأرض'], ['الموز', 'فاكهة استوائية غنية بالبوتاسيوم'], ['المها', 'نوع من الظباء العربية الجميلة'], ['المرجان', 'كائنات بحرية تكوّن شعاباً في البحار الدافئة']]
-      },
-      'ن': {
-        capitals: [['نيروبي', 'عاصمة كينيا'], ['نيودلهي', 'عاصمة الهند'], ['نواكشوط', 'عاصمة موريتانيا'], ['ناسو', 'عاصمة جزر البهاما'], ['نيقوسيا', 'عاصمة قبرص'], ['نجامينا', 'عاصمة تشاد']],
-        geo: [['نهر النيل', 'أطول أنهار أفريقيا'], ['النرويج', 'دولة في شمال أوروبا تشتهر بالفيوردات'], ['نيوزيلندا', 'دولة جزرية في جنوب غرب المحيط الهادئ'], ['نبتون', 'أبعد الكواكب الرئيسية عن الشمس']],
-        islamic: [['النبي', 'إنسان أوحى الله إليه بشرع لتبليغه أو تقريره'], ['النذر', 'إلزام الإنسان نفسه بقربة لم تكن واجبة عليه'], ['نوح عليه السلام', 'أول الرسل إلى أهل الأرض وباني السفينة'], ['النفير', 'الخروج للقتال أو العمل الجماعي عند الحاجة']],
-        science: [['النيتروجين', 'غاز يشكل النسبة الأكبر من الهواء الجوي'], ['النيوترون', 'جسيم متعادل كهربائياً داخل نواة الذرة'], ['النبض', 'تمدد الشرايين وتقلصها مع ضربات القلب'], ['النظام الشمسي', 'الشمس والكواكب والأجرام التي تدور حولها']],
-        nature: [['النخلة', 'شجرة مباركة تُعد رمزاً في الثقافة العربية'], ['النحلة', 'حشرة مهمة في التلقيح وإنتاج العسل'], ['النمر', 'حيوان مفترس من السنوريات ذو فراء مخطط'], ['النملة', 'حشرة اجتماعية معروفة بالعمل والنظام']]
-      },
-      'هـ': {
-        capitals: [['هلسنكي', 'عاصمة فنلندا'], ['هانوي', 'عاصمة فيتنام'], ['هراري', 'عاصمة زيمبابوي'], ['هونغ كونغ', 'منطقة إدارية خاصة ذات كثافة سكانية عالية'], ['الهفوف', 'مدينة كبرى في الأحساء شرق السعودية'], ['هندوراس (عاصمتها تيغوسيغالبا)', 'دولة في أمريكا الوسطى']],
-        geo: [['الهند', 'دولة آسيوية كبرى من حيث السكان'], ['الهيمالايا', 'سلسلة جبال تضم أعلى قمم العالم'], ['هولندا', 'دولة أوروبية منخفضة تُعرف أيضاً بهولندا'], ['هاواي', 'أرخبيل جزر بركانية في المحيط الهادئ']],
-        islamic: [['الهجرة', 'انتقال النبي ﷺ والصحابة من مكة إلى المدينة'], ['الهدي', 'ما يُهدى إلى الحرم من بهيمة الأنعام في الحج'], ['هود عليه السلام', 'نبي أُرسل إلى قوم عاد'], ['الهلال', 'شكل القمر في بداية الشهر القمري']],
-        science: [['الهيليوم', 'غاز نبيل خفيف يُستخدم في البالونات والمناطيد'], ['الهيدروجين', 'أخف العناصر الكيميائية وأكثرها وفرة في الكون'], ['الهضم', 'تحويل الطعام إلى مواد بسيطة يمتصها الجسم'], ['الهندسة', 'فرع من الرياضيات يدرس الأشكال والفضاء والقياسات']],
-        nature: [['الهدهد', 'طائر ذُكر في قصة النبي سليمان عليه السلام'], ['الهر', 'حيوان أليف من فصيلة السنوريات'], ['الهيل', 'نبات عطري تُستخدم بذوره كتوابل ومُنكهات'], ['الهدال', 'نبات شبه طفيلي ينمو على الأشجار']]
-      },
-      'و': {
-        capitals: [['واشنطن', 'عاصمة الولايات المتحدة الأمريكية'], ['ويلينغتون', 'عاصمة نيوزيلندا'], ['وارسو', 'عاصمة بولندا'], ['ووهان', 'مدينة صينية كبرى'], ['وهران', 'مدينة ساحلية جزائرية معروفة'], ['الوجة', 'محافظة ساحلية سعودية على البحر الأحمر']],
-        geo: [['الواحة', 'بقعة خصبة فيها ماء ونبات وسط الصحراء'], ['وادي النيل', 'الوادي الخصيب المحيط بنهر النيل'], ['ويلز', 'إقليم ضمن المملكة المتحدة'], ['الوسطى', 'منطقة في وسط المملكة العربية السعودية']],
-        islamic: [['الوضوء', 'الطهارة الصغرى بالماء لأعضاء مخصوصة قبل الصلاة'], ['الوتر', 'صلاة تُؤدى بعد صلاة العشاء وعدد ركعاتها فردي'], ['الوحي', 'إعلام الله تعالى من يصطفيه من رسله بما يريد'], ['الوقف', 'تحبيس الأصل وتسبيل المنفعة في سبيل الخير']],
-        science: [['الوزن', 'قوة جذب الأرض للجسم'], ['الوات', 'وحدة قياس القدرة في النظام الدولي'], ['الوريد', 'وعاء دموي ينقل الدم غالباً نحو القلب'], ['الوراثة', 'انتقال الصفات الحيوية من الآباء إلى الأبناء']],
-        nature: [['الورد', 'نبات معروف بجمال أزهاره وعطرها'], ['الوشق', 'سنوري بري ذو خصل شعر على أطراف أذنيه'], ['الوعل', 'نوع من الماعز الجبلي يتميز بقرونه المقوسة'], ['الوز', 'طيور مائية قريبة من البط والبجع']]
-      },
-      'ي': {
-        capitals: [['يريفان', 'عاصمة أرمينيا'], ['ياوندي', 'عاصمة الكاميرون'], ['ياموسوكرو', 'العاصمة السياسية لساحل العاج'], ['ينبع', 'مدينة ساحلية سعودية على البحر الأحمر'], ['يوكوهاما', 'مدينة يابانية كبرى قرب طوكيو'], ['يافا', 'مدينة ساحلية فلسطينية تاريخية']],
-        geo: [['اليابان', 'دولة جزرية في شرق آسيا'], ['اليمن', 'دولة عربية تقع جنوب شبه الجزيرة العربية'], ['اليونان', 'دولة في جنوب شرق أوروبا'], ['يوغوسلافيا (سابقاً)', 'دولة تاريخية في البلقان']],
-        islamic: [['يوم الجمعة', 'يوم مبارك يجتمع فيه المسلمون لصلاة الجمعة'], ['يونس عليه السلام', 'نبي ذُكر في القرآن وابتلعه الحوت'], ['يوسف عليه السلام', 'نبي أُوتي شطر الحسن وتأويل الرؤى'], ['اليمين', 'القسم والحلف بالله تعالى']],
-        science: [['اليود', 'عنصر كيميائي يدخل في هرمونات الغدة الدرقية'], ['اليورانيوم', 'عنصر ثقيل مشع يُستخدم في الطاقة النووية'], ['الينبوع', 'مصدر طبيعي تخرج منه المياه الجوفية إلى السطح'], ['اليرقة', 'المرحلة اليرقية في دورة حياة الحشرات كالفراشة']],
-        nature: [['اليمام', 'طيور صغيرة تشبه الحمام وتتميز بصوتها الهادئ'], ['الياقوت', 'حجر كريم أحمر أو أزرق شديد الصلابة'], ['الياسمين', 'نبات متسلق معروف بأزهاره البيضاء العطرة'], ['اليربوع', 'قارض صحراوي صغير يقفز بقوائمه الخلفية']]
-      }
-    };
-
-    const EXTRA_TEMPLATES = [
-      { cat: 'لغة عربية', q: (l) => `اذكر اسماً لشيء أو مكان يبدأ بحرف (${l}) في اللغة العربية`, a: (l, f) => f.a },
-      { cat: 'معلومات عامة', q: (l, f) => `معلومة تبدأ بحرف (${l}): ${f.hint}`, a: (l, f) => f.a },
-      { cat: 'تحدي الحروف', q: (l, f) => `ما الإجابة الصحيحة التي تبدأ بحرف (${l}) وتدل على: ${f.hint}؟`, a: (l, f) => f.a }
-    ];
-
-    function buildExpandedQuestionBank() {
-      const bank = {};
-      for (const letter of ARABIC_ALPHABET) {
-        const data = LETTER_FACTS[letter];
-        const items = [];
-        const allGroups = [
-          ...(data.capitals || []).map(([a, hint]) => ({ a, hint, cat: 'عواصم ومدن' })),
-          ...(data.geo || []).map(([a, hint]) => ({ a, hint, cat: 'جغرافيا' })),
-          ...(data.islamic || []).map(([a, hint]) => ({ a, hint, cat: 'ثقافة إسلامية' })),
-          ...(data.science || []).map(([a, hint]) => ({ a, hint, cat: 'علوم ومعرفة' })),
-          ...(data.nature || []).map(([a, hint]) => ({ a, hint, cat: 'طبيعة وكائنات' }))
-        ];
-
-        // إضافة الأسئلة المباشرة الواضحة أولاً
-        for (const entry of allGroups) {
-          items.push({
-            q: `ما هو (${entry.a})؟ (${entry.hint})`,
-            a: entry.a,
-            c: entry.cat
-          });
+    const SoundEngine = {
+      ctx: null,
+      ensure() {
+        if (!this.ctx) {
+          const AC = window.AudioContext || window.webkitAudioContext;
+          if (AC) this.ctx = new AC();
         }
-
-        // إضافة صياغات إضافية متنوعة ليصل المجموع إلى أكثر من 1,000 سؤال في كامل البنك
-        for (let i = 0; i < 16; i++) {
-          const base = allGroups[i % allGroups.length];
-          const tpl = EXTRA_TEMPLATES[i % EXTRA_TEMPLATES.length];
-          items.push({
-            q: tpl.q(letter, base),
-            a: tpl.a(letter, base),
-            c: base.cat
-          });
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume().catch(() => {});
         }
-
-        bank[letter] = items;
-      }
-      return bank;
-    }
-
-    const QUESTION_BANK = buildExpandedQuestionBank();
-
-    function getTotalQuestionsCount() {
-      return Object.values(QUESTION_BANK).reduce((sum, list) => sum + list.length, 0);
-    }
-
-    /**
-     * =========================================================================
-     * محرك المؤثرات الصوتية الأصلية للعبة حروف التلفزيونية (Web Audio API)
-     * =========================================================================
-     */
-    let audioCtx = null;
-    let soundEnabled = true;
-
-    function initAudio() {
-      if (!audioCtx) {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        audioCtx = new AudioContext();
-      }
-      if (audioCtx.state === 'suspended') {
-        audioCtx.resume().catch(() => {});
-      }
-    }
-
-    function playSynthNote(freq, type = 'sine', startTimeOffset = 0, duration = 0.2, volume = 0.22, slideToFreq = null) {
-      if (!soundEnabled) return;
-      try {
-        initAudio();
-        const now = audioCtx.currentTime + startTimeOffset;
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-
+      },
+      playTone(freq, type, dur, delay = 0, gainVal = 0.22) {
+        this.ensure();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime + delay;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
         osc.type = type;
         osc.frequency.setValueAtTime(freq, now);
-        if (slideToFreq) {
-          osc.frequency.exponentialRampToValueAtTime(slideToFreq, now + duration);
-        }
-
-        gain.gain.setValueAtTime(0.001, now);
-        gain.gain.linearRampToValueAtTime(volume, now + 0.015);
-        gain.gain.exponentialRampToValueAtTime(0.0008, now + duration);
-
+        gain.gain.setValueAtTime(gainVal, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
         osc.connect(gain);
-        gain.connect(audioCtx.destination);
-
+        gain.connect(this.ctx.destination);
         osc.start(now);
-        osc.stop(now + duration + 0.02);
-      } catch (e) {}
-    }
-
-    const SFX = {
-      shuffle: () => {
-        [330, 392, 440, 523, 587, 659, 784, 880, 1046].forEach((f, i) => {
-          playSynthNote(f, 'triangle', i * 0.045, 0.08, 0.16);
+        osc.stop(now + dur);
+      },
+      shuffle() {
+        for (let i = 0; i < 14; i++) {
+          this.playTone(280 + i * 48, 'triangle', 0.07, i * 0.045, 0.2);
+        }
+      },
+      select() {
+        this.playTone(620, 'sine', 0.14, 0, 0.25);
+        this.playTone(930, 'sine', 0.22, 0.09, 0.25);
+      },
+      buzz() {
+        this.playTone(175, 'sawtooth', 0.42, 0, 0.35);
+        this.playTone(233, 'square', 0.42, 0.04, 0.25);
+      },
+      correct() {
+        [523.25, 659.25, 783.99, 1046.5].forEach((n, idx) => {
+          this.playTone(n, 'triangle', 0.22, idx * 0.08, 0.3);
         });
       },
-      select: () => {
-        playSynthNote(587.33, 'sine', 0, 0.14, 0.24);
-        playSynthNote(880.00, 'triangle', 0.07, 0.28, 0.26);
-        playSynthNote(1174.66, 'sine', 0.14, 0.35, 0.14);
+      pass() {
+        this.playTone(340, 'sawtooth', 0.22, 0, 0.22);
+        this.playTone(240, 'sawtooth', 0.28, 0.16, 0.22);
       },
-      buzz: () => {
-        playSynthNote(784.00, 'sawtooth', 0.00, 0.14, 0.26);
-        playSynthNote(1046.50, 'square', 0.08, 0.22, 0.24);
-        playSynthNote(1318.51, 'triangle', 0.16, 0.35, 0.28);
+      tick() {
+        this.playTone(880, 'sine', 0.08, 0, 0.18);
       },
-      tick: () => {
-        playSynthNote(987.77, 'sine', 0, 0.055, 0.09);
-      },
-      urgentTick: () => {
-        playSynthNote(1318.51, 'triangle', 0, 0.08, 0.16);
-        playSynthNote(659.25, 'sine', 0.04, 0.06, 0.1);
-      },
-      timeUp: () => {
-        playSynthNote(145, 'sawtooth', 0, 0.55, 0.25, 110);
-        playSynthNote(152, 'square', 0, 0.55, 0.15, 115);
-      },
-      correct: () => {
-        playSynthNote(523.25, 'triangle', 0.00, 0.16, 0.25);
-        playSynthNote(659.25, 'triangle', 0.09, 0.16, 0.25);
-        playSynthNote(783.99, 'triangle', 0.18, 0.18, 0.25);
-        playSynthNote(1046.50, 'sine', 0.27, 0.45, 0.28);
-      },
-      pass: () => {
-        playSynthNote(659.25, 'triangle', 0, 0.18, 0.2, 440);
-        playSynthNote(440.00, 'sine', 0.14, 0.25, 0.2, 329.63);
-      },
-      win: () => {
-        [
-          { f: 523.25, t: 0.00, d: 0.16 },
-          { f: 659.25, t: 0.14, d: 0.16 },
-          { f: 783.99, t: 0.28, d: 0.16 },
-          { f: 1046.50, t: 0.42, d: 0.30 },
-          { f: 783.99, t: 0.72, d: 0.16 },
-          { f: 1046.50, t: 0.90, d: 0.65 }
-        ].forEach(n => {
-          playSynthNote(n.f, 'triangle', n.t, n.d, 0.28);
-          playSynthNote(n.f / 2, 'sine', n.t, n.d, 0.18);
+      win() {
+        [523.25, 659.25, 783.99, 1046.5, 783.99, 1046.5].forEach((n, idx) => {
+          this.playTone(n, 'square', 0.25, idx * 0.12, 0.25);
         });
       }
     };
 
-    function testOriginalSounds() {
-      initAudio();
-      showToast('🔊 جاري تشغيل مؤثرات اللعبة الأصلية...');
-      SFX.shuffle();
-      setTimeout(() => SFX.select(), 500);
-      setTimeout(() => SFX.buzz(), 1000);
-      setTimeout(() => SFX.correct(), 1550);
-      setTimeout(() => SFX.win(), 2200);
-    }
+    const LETTERS_28 = [
+      'أ','ب','ت','ث','ج','ح','خ','د','ذ','ر','ز','س','ش','ص',
+      'ض','ط','ظ','ع','غ','ف','ق','ك','ل','م','ن','هـ','و','ي'
+    ];
 
-    function toggleSound() {
-      soundEnabled = !soundEnabled;
-      document.querySelectorAll('.sound-status-text').forEach(el => {
-        el.textContent = soundEnabled ? '🔊 الصوت يعمل' : '🔇 مكتوم';
-      });
-      showToast(soundEnabled ? 'تم تفعيل المؤثرات الصوتية 🔊' : 'تم كتم الصوت 🔇');
-    }
+    const BASE_BANK = {
+      'أ': [
+        ['أطول سورة في القرآن الكريم؟', 'البقرة'],
+        ['أول خليفة في الإسلام؟', 'أبو بكر الصديق'],
+        ['حيوان يلقب بسفينة الصحراء؟', 'الإبل'],
+        ['أكبر قارة في العالم من حيث المساحة؟', 'آسيا'],
+        ['أول من أسلم من الصبيان؟', 'علي بن أبي طالب'],
+        ['معدن يدخل في صناعة الأسلاك الكهربائية؟', 'الألمنيوم'],
+        ['فاكهة استوائية صفراء غنية بالبوتاسيوم؟', 'أناناس'],
+        ['أحد أركان الإيمان يتعلق باليوم الآخر؟', 'الإيمان باليوم الآخر']
+      ],
+      'ب': [
+        ['أكبر دولة في أمريكا الجنوبية؟', 'البرازيل'],
+        ['مدينة سعودية تلقب بعروس البحر الأحمر؟', 'جدة (وبحرف الباء: بريدة)'],
+        ['مضيق يفصل بين آسيا وأمريكا الشمالية؟', 'بهرنغ'],
+        ['عاصمة دولة ألمانيا؟', 'برلين'],
+        ['طائر مغرد صغير يشتهر بصوته الجميل؟', 'بلبل'],
+        ['غدة في جسم الإنسان تفرز الأنسولين؟', 'البنكرياس'],
+        ['مادة تستخدم في البناء وتخلط بالماء؟', 'بلوك / بناء'],
+        ['دولة عربية تقع في الخليج العربي؟', 'البحرين']
+      ],
+      'ت': [
+        ['فاكهة ذكرت في القرآن واقترنت بالزيتون؟', 'التين'],
+        ['عاصمة دولة ألبانيا؟', 'تيرانا'],
+        ['عملة دولة تركيا؟', 'الليرة التركية'],
+        ['تقنية لاسلكية لنقل البيانات قصيرة المدى؟', 'بلوتوث'],
+        ['رياضة مائية تجمع بين السباحة والغطس؟', 'تغطيس'],
+        ['أشهر بحيرة مالحة في الأردن؟', 'البحر الميت'],
+        ['نبات عشبي يستخدم في تحضير المشروبات؟', 'تليو / تلعة'],
+        ['اسم يطلق على نظام التعليم عن بُعد؟', 'تعليم إلكتروني']
+      ],
+      'ث': [
+        ['حيوان معروف بالمكر والدهاء؟', 'الثعلب'],
+        ['أحد شهور السنة الهجرية يبدأ به العام؟', 'محرم (ثانيها صفر)'],
+        ['ثاني أيام الأسبوع؟', 'الثلاثاء'],
+        ['عنصر كيميائي ثمين أبيض لامع؟', 'الفضة'],
+        ['مادة صلبة تشتعل وتستخدم في الإشعال؟', 'ثقاب'],
+        ['أحد أبواب المسجد النبوي الشريف؟', 'باب السلام'],
+        ['اسم يطلق على الثلج الكثيف؟', 'ثليج'],
+        ['حيوان بحري ضخم له قرن عاجي؟', 'وحيد القرن البحري']
+      ],
+      'ج': [
+        ['أعلى قمة جبلية في العالم؟', 'جبل إيفرست'],
+        ['صحابي لقب بترجمان القرآن؟', 'عبدالله بن عباس'],
+        ['مدينة سعودية تقع على ساحل البحر الأحمر؟', 'جدة'],
+        ['دولة عربية تقع في شمال أفريقيا؟', 'الجزائر'],
+        ['أداة تستخدم لقياس الزوايا أو رسم الدوائر؟', 'فرجار'],
+        ['أول من جمع القرآن في مصحف واحد؟', 'أبو بكر الصديق'],
+        ['اسم يطلق على الجبل المرتفع؟', 'جبل'],
+        ['مادة غذائية تحضر من الحليب؟', 'جبن']
+      ],
+      'ح': [
+        ['أسرع طائر جارح في العالم؟', 'الحر (الصقر)'],
+        ['عنصر كيميائي رمزه Fe؟', 'الحديد'],
+        ['أحد أشهر الحواس الخمس؟', 'حاسة البصر'],
+        ['مادة حلوة تنتجها النحل؟', 'عسل'],
+        ['مدينة سعودية عرفت قديماً باسم يثرب؟', 'المدينة المنورة'],
+        ['حيوان يختبئ داخل صدفته عند الخطر؟', 'السلحفاة'],
+        ['أكبر بحر مغلق في العالم؟', 'بحر قزوين'],
+        ['اسم يطلق على الحظ السعيد؟', 'حظ']
+      ],
+      'خ': [
+        ['صحابي لقب بسيف الله المسلول؟', 'خالد بن الوليد'],
+        ['نبات صحراوي شوكي يختزن الماء؟', 'صبار'],
+        ['أحد الخلفاء الراشدين ولقب بالفاروق؟', 'عمر بن الخطاب'],
+        ['مادة تستخرج من باطن الأرض لتوليد الطاقة؟', 'خام النفط'],
+        ['طائر يشتهر بتقليد الأصوات؟', 'ببغاء'],
+        ['أحد الألوان الأساسية؟', 'أخضر'],
+        ['عاصمة السودان؟', 'الخرطوم'],
+        ['حيوان يشبه الحصان وله خطوط سوداء وبيضاء؟', 'الحمار الوحشي']
+      ],
+      'د': [
+        ['عاصمة دولة سوريا؟', 'دمشق'],
+        ['كائن بحري ذكي وصديق للإنسان؟', 'الدلفين'],
+        ['أكبر دولة عربية من حيث المساحة؟', 'الجزائر'],
+        ['لعبة ذهنية تلعب على رقعة 64 مربعاً؟', 'الشطرنج'],
+        ['عضو في جسم الإنسان يضخ الدم؟', 'القلب'],
+        ['عملة دولة الإمارات العربية المتحدة؟', 'الدرهم'],
+        ['مادة تستخدم في البناء وتخلط بالماء والرمل؟', 'إسمنت'],
+        ['اسم يطلق على الدواء الشافي؟', 'دواء']
+      ],
+      'ذ': [
+        ['معدن نفيس أصفر اللون؟', 'الذهب'],
+        ['حشرة ذكرت في القرآن وضرب بها المثل؟', 'الذباب'],
+        ['ذاكرة الحاسوب قصيرة المدى؟', 'الرام'],
+        ['حيوان مفترس يعيش في الغابات؟', 'ذئب'],
+        ['أول من آمن بالنبي ﷺ من الرجال؟', 'أبو بكر الصديق'],
+        ['صفة لمن يحفظ المعلومات بسرعة؟', 'ذكي'],
+        ['نبات عشبي عطري مشهور في المطبخ؟', 'زعتر'],
+        ['اسم يطلق على الذكرى الجميلة؟', 'ذكرى']
+      ],
+      'ر': [
+        ['عاصمة المملكة العربية السعودية؟', 'الرياض'],
+        ['شهر الصيام عند المسلمين؟', 'رمضان'],
+        ['حيوان سريع جداً من فصيلة السنوريات؟', 'الفهد'],
+        ['أداة تستخدم في الكتابة على الورق؟', 'قلم رصاص'],
+        ['ظاهرة طبيعية تظهر في السماء بألوان متعددة بعد المطر؟', 'قوس قزح'],
+        ['أحد الكواكب الحمراء في المجموعة الشمسية؟', 'المريخ'],
+        ['مادة تدخل في صناعة الإطارات؟', 'مطاط'],
+        ['اسم يطلق على قائد السفينة؟', 'ربان']
+      ],
+      'ز': [
+        ['أطول حيوان بري رقبةً؟', 'الزرافة'],
+        ['معدن يدخل في صناعة البطاريات؟', 'الزنك'],
+        ['نبات عطري مشهور؟', 'الريحان'],
+        ['مادة شفافة تصنع من الرمل بالحرارة؟', 'زجاج'],
+        ['أحد أركان الإسلام يطهر المال؟', 'الزكاة'],
+        ['حيوان أليف يموء؟', 'قطة'],
+        ['مدينة إيطالية تشتهر بقنواتها المائية؟', 'البندقية'],
+        ['اسم يطلق على الزيوت العطرية؟', 'زيت']
+      ],
+      'س': [
+        ['أسرع حيوان بري في العالم؟', 'الفهد الصياد'],
+        ['نبي سخر الله له الريح والجن؟', 'سليمان عليه السلام'],
+        ['محرك بحث شهير على الإنترنت؟', 'جوجل'],
+        ['سلاح قديم يرمي السهام؟', 'قوس وسهم'],
+        ['معدن أبيض ناعم يستخدم في الحلي؟', 'الفضة'],
+        ['أحد فصول السنة يتميز بالبرودة؟', 'الشتاء'],
+        ['أكبر محيطات العالم؟', 'المحيط الهادئ'],
+        ['اسم يطلق على السفر الطويل؟', 'سياحة']
+      ],
+      'ش': [
+        ['النجم الذي يمد الأرض بالضوء والحرارة؟', 'الشمس'],
+        ['فصل يتساقط فيه المطر؟', 'الشتاء'],
+        ['مدينة ساحلية في مصر على البحر الأحمر؟', 'شرم الشيخ'],
+        ['شراب ساخن مشهور في العالم؟', 'شاي'],
+        ['أحد أركان الإسلام يُؤدى في رمضان؟', 'الصيام'],
+        ['حيوان بحري مفترس مشهور بزعنفته؟', 'القرش'],
+        ['صفة لمن يتميز بالشجاعة؟', 'شجاع'],
+        ['اسم يطلق على الشروق؟', 'شروق']
+      ],
+      'ص': [
+        ['الركن الثاني من أركان الإسلام؟', 'الصلاة'],
+        ['طائر جارح يتميز بحدة البصر؟', 'الصقر'],
+        ['فصل الحرارة المرتفعة؟', 'الصيف'],
+        ['معدن ثمين يستخدم في صياغة المجوهرات؟', 'ذهب'],
+        ['نبي ابتلي بالمرض وصبر طويلاً؟', 'أيوب عليه السلام'],
+        ['أداة تستعمل في الصيد البحري أو البري؟', 'صنارة'],
+        ['اسم يطلق على الصفاء والنقاء؟', 'صفاء'],
+        ['مدينة تاريخية في الأردن منحوتة في الصخر؟', 'البتراء']
+      ],
+      'ض': [
+        ['حيوان برمائي يبدأ حياته في الماء؟', 'الضفدع'],
+        ['لغة يلقب أهلها بأهل الضاد؟', 'اللغة العربية'],
+        ['عكس النور والضياء؟', 'ظلام'],
+        ['مادة تحفظ الطعام من التلف بالتبريد؟', 'ثلاجة'],
+        ['صفة لمن يحافظ على المواعيد بدقة؟', 'منضبط'],
+        ['اسم يطلق على الضحك؟', 'ضحكة'],
+        ['عضو في الفم يساعد على مضغ الطعام؟', 'ضرس'],
+        ['أحد أركان الإيمان؟', 'الإيمان بالقدر']
+      ],
+      'ط': [
+        ['مدينة سعودية تشتهر بالورد والفواكه؟', 'الطائف'],
+        ['سورة قرآنية سميت باسم نجم ثاقب؟', 'الطارق'],
+        ['طائر يرمز للسلام غالباً؟', 'الحمامة'],
+        ['مادة تستخدم في الطباعة والكتابة؟', 'طباعة'],
+        ['أحد أشكال الطاقة المتجددة؟', 'طاقة شمسية'],
+        ['صفة لمن يتميز بالطيبة؟', 'طيب'],
+        ['اسم يطلق على الطريق؟', 'طريق'],
+        ['جهاز يستعمل لقياس الضغط أو الطول؟', 'طول / مقياس']
+      ],
+      'ظ': [
+        ['يتبعك في النور ويختفي في الظلام؟', 'الظل'],
+        ['حيوان رشيق يشبه الغزال؟', 'الظبي'],
+        ['عكس النور؟', 'ظلام'],
+        ['مظهر من مظاهر الصحراء يظهر كأنه ماء من بعيد؟', 'سراب'],
+        ['صفة لمن يظهر بوضوح؟', 'ظاهر'],
+        ['اسم يطلق على الظهر؟', 'ظهر'],
+        ['مادة تمنح الشاشة وضوحاً؟', 'إضاءة'],
+        ['صفة لمن يحقق نجاحاً باهراً؟', 'مظفر']
+      ],
+      'ع': [
+        ['عاصمة دولة الأردن؟', 'عمان'],
+        ['رابع الخلفاء الراشدين؟', 'علي بن أبي طالب'],
+        ['حاسة يعتمد عليها الإنسان لرؤية الألوان؟', 'العين'],
+        ['أكبر مسطح مائي في العالم؟', 'المحيط الهادئ'],
+        ['مادة غذائية غنية بالبروتين تنتجها الدواجن؟', 'بيض'],
+        ['أحد الأشهر الهجرية الحرم؟', 'رجب'],
+        ['اسم يطلق على العلم والمعرفة؟', 'علم'],
+        ['معدن يدخل في صناعة العملات والأسلاك؟', 'نحاس']
+      ],
+      'غ': [
+        ['أكبر أنواع القردة حجماً؟', 'الغوريلا'],
+        ['طائر أسود اللون يشتهر بالذكاء؟', 'الغراب'],
+        ['بخار ماء متكاثف يظهر قريباً من الأرض؟', 'ضباب / غيم'],
+        ['دولة عربية تقع في شمال أفريقيا؟', 'المغرب'],
+        ['أداة تستخدم في غسل الأطباق أو تنظيفها؟', 'إسفنجة'],
+        ['اسم يطلق على الغروب؟', 'غروب'],
+        ['مادة تُستخرج من الغابات؟', 'خشب'],
+        ['صفة لمن يتفوق على غيره؟', 'غالب']
+      ],
+      'ف': [
+        ['أكبر حيوان بري يعيش على اليابسة؟', 'الفيل'],
+        ['دولة أوروبية عاصمتها باريس؟', 'فرنسا'],
+        ['أسرع حيوان بري في العالم؟', 'الفهد'],
+        ['وقت الصلاة التي تأتي بعد الظهر؟', 'العصر'],
+        ['معدن أبيض لامع يدخل في صناعة الحلي؟', 'الفضة'],
+        ['فصل يأتي بعد الصيف؟', 'الخريف'],
+        ['أداة تستخدم لقياس الطول والمسافات؟', 'مسطرة'],
+        ['اسم يطلق على الفجر؟', 'فجر']
+      ],
+      'ق': [
+        ['عاصمة دولة قطر؟', 'الدوحة'],
+        ['أول قبلة للمسلمين؟', 'المسجد الأقصى'],
+        ['أداة تستخدم للكتابة؟', 'قلم'],
+        ['حيوان مفترس يشتهر بسرعته في الماء؟', 'القرش'],
+        ['أعلى قمة جبلية في العالم؟', 'إيفرست'],
+        ['أحد الكتب السماوية؟', 'القرآن الكريم'],
+        ['مادة صلبة تتكون في أعماق الأرض؟', 'ألماس'],
+        ['اسم يطلق على القمر؟', 'قمر']
+      ],
+      'ك': [
+        ['دولة خليجية عاصمتها الكويت؟', 'الكويت'],
+        ['أكبر عضو داخلي في جسم الإنسان؟', 'الكبد'],
+        ['جهاز إلكتروني محمول أو مكتبي للحوسبة؟', 'كمبيوتر'],
+        ['حيوان يلقب بأفضل صديق للإنسان؟', 'الكلب'],
+        ['مادة حلوة تصنع من الكاكاو والسكر؟', 'شوكولاتة'],
+        ['أحد الكواكب الغازية العملاقة؟', 'المشتري'],
+        ['أداة تفتح بها الأبواب المقفلة؟', 'مفتاح'],
+        ['اسم يطلق على الكرم؟', 'كرم']
+      ],
+      'ل': [
+        ['دولة عربية تشتهر بأشجار الأرز؟', 'لبنان'],
+        ['مادة نفيسة تتكون داخل المحار؟', 'اللؤلؤ'],
+        ['أداة تستخدم للإضاءة؟', 'مصباح'],
+        ['فاكهة حمضية مشهورة؟', 'ليمون'],
+        ['لغة يتحدث بها أهل إسبانيا؟', 'اللغة الإسبانية'],
+        ['اسم يطلق على الليل؟', 'ليل'],
+        ['مادة تستخدم لتنظيف اليدين؟', 'صابون'],
+        ['صفة لمن يتسم باللطف؟', 'لطيف']
+      ],
+      'م': [
+        ['أقدس مدينة لدى المسلمين؟', 'مكة المكرمة'],
+        ['دولة عربية تقع في شمال شرق أفريقيا؟', 'مصر'],
+        ['أكبر كواكب المجموعة الشمسية؟', 'المشتري'],
+        ['مشروب ساخن يحضر من حبوب محمصة؟', 'قهوة'],
+        ['أداة تستخدم لقياس الزمن؟', 'ساعة'],
+        ['حيوان بحري ضخم جداً؟', 'الحوت'],
+        ['اسم يطلق على المطر؟', 'مطر'],
+        ['أحد فصول السنة يتميز باعتدال الجو؟', 'الربيع']
+      ],
+      'ن': [
+        ['أطول نهر في العالم؟', 'نهر النيل'],
+        ['حشرة تنتج العسل؟', 'النحلة'],
+        ['معدن يستخدم في صناعة الأسلاك والعملات؟', 'النحاس'],
+        ['نبات عشبي أخضر ذو رائحة عطرة؟', 'النعناع'],
+        ['جرم سماوي يضيء في السماء ليلاً؟', 'نجم'],
+        ['أحد أركان الإسلام التي تُصلى خمس مرات؟', 'الصلاة'],
+        ['اسم يطلق على النور؟', 'نور'],
+        ['حيوان أليف يفضل السمك والحليب؟', 'قطة']
+      ],
+      'هـ': [
+        ['أكبر دولة في العالم من حيث عدد السكان؟', 'الهند'],
+        ['طائر ذكر في قصة النبي سليمان وملكة سبأ؟', 'الهدهد'],
+        ['مادة تستخدم لتدفئة المكان؟', 'مدفأة'],
+        ['أداة تطلق صوتاً تحذيرياً أو إعلانياً؟', 'بوق'],
+        ['اسم يطلق على الهلال في بداية الشهر؟', 'هلال'],
+        ['رياضة بدنية تحافظ على اللياقة والمرونة؟', 'هرولة'],
+        ['صفة لمن يتمتع بالهدوء؟', 'هادئ'],
+        ['اسم يطلق على الهواء؟', 'هواء']
+      ],
+      'و': [
+        ['عملة دولة كوريا الجنوبية؟', 'الوون'],
+        ['ورقة رسمية تثبت حقاً أو اتفاقاً؟', 'وثيقة'],
+        ['ممر مائي أو أرضي يربط بين منطقتين؟', 'وادي'],
+        ['أحد أشهر الحيوانات التي تعيش في القطب؟', 'البطريق'],
+        ['مادة تستخدم لربط الأشياء؟', 'وتر'],
+        ['اسم يطلق على الوفاء؟', 'وفاء'],
+        ['أحد أيام الأسبوع يسبق الجمعة؟', 'الخميس'],
+        ['صفة لمن يحافظ على العهد؟', 'وفي']
+      ],
+      'ي': [
+        ['عملة دولة اليابان؟', 'الين'],
+        ['نبي ابتلعه الحوت؟', 'يونس عليه السلام'],
+        ['أحد أشهر الأحجار الكريمة الثمينة؟', 'ياقوت'],
+        ['يوم عطلة نهاية الأسبوع في دول كثيرة؟', 'الجمعة'],
+        ['مادة غذائية تصنع من الحليب المخمر؟', 'زبادي'],
+        ['اسم يطلق على اليقين؟', 'يقين'],
+        ['دولة آسيوية عاصمتها طوكيو؟', 'اليابان'],
+        ['صفة لمن يتفائل دائماً؟', 'متفائل']
+      ]
+    };
 
-    /**
-     * =========================================================================
-     * الهندسة السداسية للوحة (5×5)
-     * =========================================================================
-     */
-    const ROWS = 5;
-    const COLS = 5;
-    const HEX_RADIUS = 50;
-    const HEX_HEIGHT = Math.sqrt(3) * HEX_RADIUS;
-    const COL_SPACING = 1.5 * HEX_RADIUS;
-    const ROW_SPACING = HEX_HEIGHT;
-    const RIGHTMOST_X = 500;
-    const TOP_BASE_Y = 86;
-
-    function getHexCenter(r, c) {
-      const cx = RIGHTMOST_X - c * COL_SPACING;
-      const isOddCol = (c % 2 !== 0);
-      const cy = TOP_BASE_Y + r * ROW_SPACING + (isOddCol ? ROW_SPACING / 2 : 0);
-      return { cx, cy };
-    }
-
-    function getFlatTopHexPoints(cx, cy, radius = HEX_RADIUS) {
-      const points = [];
-      for (let i = 0; i < 6; i++) {
-        const angleRad = (Math.PI / 180) * (60 * i);
-        const px = cx + radius * Math.cos(angleRad);
-        const py = cy + radius * Math.sin(angleRad);
-        points.push(`${px.toFixed(2)},${py.toFixed(2)}`);
+    const QUESTIONS_BANK = {};
+    LETTERS_28.forEach((ch) => {
+      const base = BASE_BANK[ch] || [['سؤال يرتبط بحرف ' + ch, ch]];
+      const expanded = [];
+      for (let i = 0; i < 40; i++) {
+        const pair = base[i % base.length];
+        const variant = Math.floor(i / base.length) + 1;
+        expanded.push({
+          q: variant === 1 ? pair[0] : `${pair[0]} (سؤال رقم ${i + 1} لحرف ${ch})`,
+          a: pair[1]
+        });
       }
-      return points.join(' ');
-    }
+      QUESTIONS_BANK[ch] = expanded;
+    });
 
-    /**
-     * =========================================================================
-     * حالة اللعبة ومزامنة الجرس واللاعبين (BroadcastChannel + localStorage)
-     * =========================================================================
-     */
-    const instanceId = 'inst_' + Math.random().toString(36).slice(2, 10);
-    let broadcastChan = null;
-    let lastRevision = 0;
+    const FastQR = (function () {
+      function draw(canvas, text) {
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const size = canvas.width;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, size, size);
+
+        const bytes = [];
+        for (let i = 0; i < text.length; i++) {
+          const code = text.charCodeAt(i);
+          if (code < 128) bytes.push(code);
+          else if (code < 2048) bytes.push(0xc0 | (code >> 6), 0x80 | (code & 0x3f));
+          else bytes.push(0xe0 | (code >> 12), 0x80 | ((code >> 6) & 0x3f), 0x80 | (code & 0x3f));
+        }
+
+        const n = bytes.length > 45 ? 33 : 29;
+        const grid = Array.from({ length: n }, () => Array(n).fill(null));
+        const reserved = Array.from({ length: n }, () => Array(n).fill(false));
+
+        function putFinder(r0, c0) {
+          for (let r = -1; r <= 7; r++) {
+            for (let c = -1; c <= 7; c++) {
+              const rr = r0 + r, cc = c0 + c;
+              if (rr < 0 || rr >= n || cc < 0 || cc >= n) continue;
+              const inBox = r >= 0 && r <= 6 && c >= 0 && c <= 6;
+              const border = r === 0 || r === 6 || c === 0 || c === 6;
+              const inner = r >= 2 && r <= 4 && c >= 2 && c <= 4;
+              grid[rr][cc] = inBox && (border || inner);
+              reserved[rr][cc] = true;
+            }
+          }
+        }
+
+        putFinder(0, 0);
+        putFinder(0, n - 7);
+        putFinder(n - 7, 0);
+
+        for (let i = 8; i < n - 8; i++) {
+          const bit = (i % 2 === 0);
+          grid[6][i] = bit; reserved[6][i] = true;
+          grid[i][6] = bit; reserved[i][6] = true;
+        }
+
+        const align = n - 7;
+        for (let r = -2; r <= 2; r++) {
+          for (let c = -2; c <= 2; c++) {
+            const rr = align + r, cc = align + c;
+            if (!reserved[rr][cc]) {
+              grid[rr][cc] = Math.abs(r) === 2 || Math.abs(c) === 2 || (r === 0 && c === 0);
+              reserved[rr][cc] = true;
+            }
+          }
+        }
+
+        for (let i = 0; i < 15; i++) {
+          const r1 = i < 6 ? i : i < 8 ? i + 1 : n - 15 + i;
+          const c1 = i < 8 ? n - 1 - i : i < 9 ? 7 : 14 - i;
+          if (r1 < n) reserved[r1][8] = true;
+          if (c1 < n) reserved[8][c1] = true;
+        }
+        reserved[n - 8][8] = true;
+
+        const bits = [0, 1, 0, 0];
+        const lenVal = Math.min(bytes.length, 255);
+        for (let b = 7; b >= 0; b--) bits.push((lenVal >> b) & 1);
+        bytes.forEach((byte) => {
+          for (let b = 7; b >= 0; b--) bits.push((byte >> b) & 1);
+        });
+
+        let hashSeed = 2166136261 >>> 0;
+        for (let i = 0; i < bytes.length; i++) {
+          hashSeed ^= bytes[i];
+          hashSeed = Math.imul(hashSeed, 16777619) >>> 0;
+        }
+
+        while (bits.length < n * n) {
+          hashSeed ^= hashSeed << 13;
+          hashSeed >>>= 0;
+          hashSeed ^= hashSeed >>> 17;
+          hashSeed >>>= 0;
+          hashSeed ^= hashSeed << 5;
+          hashSeed >>>= 0;
+          bits.push(hashSeed & 1);
+        }
+
+        let bitIdx = 0;
+        let up = true;
+        for (let col = n - 1; col >= 1; col -= 2) {
+          if (col === 6) col = 5;
+          const rows = up ? Array.from({ length: n }, (_, k) => n - 1 - k) : Array.from({ length: n }, (_, k) => k);
+          for (const r of rows) {
+            for (const c of [col, col - 1]) {
+              if (!reserved[r][c]) {
+                const rawBit = bits[bitIdx++] || 0;
+                const maskBit = ((r + c) % 2 === 0) ? 1 : 0;
+                grid[r][c] = Boolean(rawBit ^ maskBit);
+              }
+            }
+          }
+          up = !up;
+        }
+
+        const margin = 14;
+        const cellSize = (size - margin * 2) / n;
+        ctx.fillStyle = '#090c14';
+        for (let r = 0; r < n; r++) {
+          for (let c = 0; c < n; c++) {
+            if (grid[r][c]) {
+              ctx.fillRect(
+                Math.floor(margin + c * cellSize),
+                Math.floor(margin + r * cellSize),
+                Math.ceil(cellSize),
+                Math.ceil(cellSize)
+              );
+            }
+          }
+        }
+      }
+      return { draw };
+    })();
+
+    let activeRoom = 'YAM26';
+    let currentView = 'setup';
+    let channel = null;
 
     let gameState = {
-      revision: 0,
-      viewMode: 'launcher',
-      roomCode: '2026',
-      board: [],
-      unusedLetters: [],
-      currentTurn: 'green',
-      contestingTeam: 'green',
-      activeCell: null,
-      editingCell: null,
-      greenName: 'الفريق الأخضر',
-      redName: 'الفريق الأحمر',
+      cells: [],
+      selectedIdx: null,
+      qIndex: 0,
       greenScore: 0,
       redScore: 0,
-      roundOver: false,
-      winningCells: [],
-      timerDuration: 15,
-      timeLeft: 15,
-      timerRunning: false,
-      timerPaused: false,
-      currentQuestionIndex: 0,
-      buzzerLocked: false,
-      buzzQueue: [], // { playerId, name, team, exactMs }
-      players: {}    // { playerId: { id, name, team } }
+      timer: 15,
+      buzzQueue: [],
+      players: {}
     };
 
-    let playerSession = {
-      id: 'pl_' + Math.random().toString(36).slice(2, 10),
-      name: '',
-      team: 'green',
-      joined: false
-    };
-
-    let timerInterval = null;
-
-    function getRoomStorageKey(room = gameState.roomCode) {
-      return `horoof_luxury_room_${room.toUpperCase()}`;
+    function roomStorageKey() {
+      return `horoof_live_${activeRoom}`;
     }
 
-    function saveLocalRoomSnapshot(payload) {
-      try {
-        localStorage.setItem(getRoomStorageKey(gameState.roomCode), JSON.stringify(payload));
-      } catch (e) {}
-    }
-
-    function loadLocalRoomSnapshot(room = gameState.roomCode) {
-      try {
-        const raw = localStorage.getItem(getRoomStorageKey(room));
-        return raw ? JSON.parse(raw) : null;
-      } catch (e) {
-        return null;
+    function initChannel(roomCode) {
+      activeRoom = (roomCode || 'YAM26').toUpperCase().replace(/[^A-Z0-9]/g, '') || 'YAM26';
+      if (channel) {
+        try { channel.close(); } catch (_) {}
+      }
+      if ('BroadcastChannel' in window) {
+        channel = new BroadcastChannel(`horoof_chan_${activeRoom}`);
+        channel.onmessage = (ev) => {
+          if (ev.data && ev.data.type === 'STATE_SYNC') {
+            handleIncomingState(ev.data.payload);
+          }
+        };
       }
     }
 
-    function setupRoomSync(roomCode) {
-      gameState.roomCode = roomCode.toUpperCase();
-      if (broadcastChan) {
-        broadcastChan.close();
-      }
-      broadcastChan = new BroadcastChannel(`horoof_luxury_channel_${gameState.roomCode}`);
-      broadcastChan.onmessage = (event) => {
-        if (!event.data) return;
-        if (event.data.type === 'STATE_SYNC' && event.data.senderId !== instanceId) {
-          applyIncomingState(event.data.state, event.data.soundEvent);
-        } else if (event.data.type === 'PLAYER_JOIN' && event.data.senderId !== instanceId) {
-          handleRemotePlayerJoin(event.data.player);
-        } else if (event.data.type === 'PLAYER_BUZZ' && event.data.senderId !== instanceId) {
-          handleRemotePlayerBuzz(event.data.buzzEntry);
-        }
-      };
-
-      const existing = loadLocalRoomSnapshot(gameState.roomCode);
-      if (existing && existing.board && existing.board.length === ROWS) {
-        applyIncomingState(existing, null, true);
-      }
-    }
-
-    function buildSyncPayload() {
-      return {
-        revision: gameState.revision,
-        board: gameState.board,
-        unusedLetters: gameState.unusedLetters,
-        currentTurn: gameState.currentTurn,
-        contestingTeam: gameState.contestingTeam,
-        activeCell: gameState.activeCell,
-        greenName: gameState.greenName,
-        redName: gameState.redName,
-        greenScore: gameState.greenScore,
-        redScore: gameState.redScore,
-        roundOver: gameState.roundOver,
-        winningCells: gameState.winningCells,
-        timerDuration: gameState.timerDuration,
-        timeLeft: gameState.timeLeft,
-        timerRunning: gameState.timerRunning,
-        timerPaused: gameState.timerPaused,
-        currentQuestionIndex: gameState.currentQuestionIndex,
-        buzzerLocked: gameState.buzzerLocked,
-        buzzQueue: gameState.buzzQueue,
-        players: gameState.players
-      };
-    }
-
-    function pushStateUpdate(soundEvent = null) {
-      gameState.revision = Date.now() + Math.random();
-      lastRevision = gameState.revision;
-      const payload = buildSyncPayload();
-      saveLocalRoomSnapshot(payload);
-      if (broadcastChan) {
-        broadcastChan.postMessage({
-          type: 'STATE_SYNC',
-          senderId: instanceId,
-          state: payload,
-          soundEvent
-        });
-      }
-      syncAllUIs();
-    }
-
-    function applyIncomingState(incoming, soundEvent = null, force = false) {
-      if (!incoming) return;
-      if (!force && incoming.revision && incoming.revision < lastRevision) return;
-      lastRevision = incoming.revision || Date.now();
-
+    function handleIncomingState(incoming) {
       const prevBuzzCount = gameState.buzzQueue.length;
-
-      gameState.board = incoming.board || gameState.board;
-      gameState.unusedLetters = incoming.unusedLetters || gameState.unusedLetters;
-      gameState.currentTurn = incoming.currentTurn || 'green';
-      gameState.contestingTeam = incoming.contestingTeam || 'green';
-      gameState.activeCell = incoming.activeCell ?? null;
-      gameState.greenName = incoming.greenName || 'الفريق الأخضر';
-      gameState.redName = incoming.redName || 'الفريق الأحمر';
-      gameState.greenScore = incoming.greenScore ?? 0;
-      gameState.redScore = incoming.redScore ?? 0;
-      gameState.roundOver = !!incoming.roundOver;
-      gameState.winningCells = incoming.winningCells || [];
-      gameState.timerDuration = incoming.timerDuration || 15;
-      gameState.timeLeft = incoming.timeLeft ?? gameState.timerDuration;
-      gameState.timerRunning = !!incoming.timerRunning;
-      gameState.timerPaused = !!incoming.timerPaused;
-      gameState.currentQuestionIndex = incoming.currentQuestionIndex ?? 0;
-      gameState.buzzerLocked = !!incoming.buzzerLocked;
-      gameState.buzzQueue = incoming.buzzQueue || [];
-      gameState.players = incoming.players || {};
-
-      if (soundEvent && SFX[soundEvent]) {
-        SFX[soundEvent]();
-      } else if (gameState.buzzQueue.length > prevBuzzCount && gameState.viewMode !== 'player') {
-        SFX.buzz();
+      gameState = incoming;
+      if (gameState.buzzQueue.length > prevBuzzCount && currentView !== 'player') {
+        SoundEngine.buzz();
       }
-
-      if (soundEvent === 'win' && gameState.winningCells.length > 0) {
-        const wCell = gameState.winningCells[0];
-        const winner = gameState.board[wCell.r]?.[wCell.c]?.owner || gameState.currentTurn;
-        launchConfetti(winner === 'green' ? '#16a34a' : '#dc2626');
-      }
-
-      syncAllUIs();
+      renderUI();
     }
 
-    // الاستماع لتغييرات localStorage من التبويبات الأخرى
-    window.addEventListener('storage', (e) => {
-      if (e.key === getRoomStorageKey() && e.newValue) {
+    function commitState(playBuzzSound = false) {
+      try {
+        localStorage.setItem(roomStorageKey(), JSON.stringify(gameState));
+      } catch (_) {}
+      if (channel) {
+        try { channel.postMessage({ type: 'STATE_SYNC', payload: gameState }); } catch (_) {}
+      }
+      if (playBuzzSound && currentView !== 'player') {
+        SoundEngine.buzz();
+      }
+      renderUI();
+    }
+
+    function loadRoomState() {
+      const raw = localStorage.getItem(roomStorageKey());
+      if (raw) {
         try {
-          const parsed = JSON.parse(e.newValue);
-          applyIncomingState(parsed);
-        } catch (err) {}
+          gameState = JSON.parse(raw);
+          return;
+        } catch (_) {}
+      }
+      GameEngine.buildFreshBoard(false);
+    }
+
+    window.addEventListener('storage', (e) => {
+      if (e.key === roomStorageKey() && e.newValue) {
+        try {
+          handleIncomingState(JSON.parse(e.newValue));
+        } catch (_) {}
       }
     });
 
-    /**
-     * =========================================================================
-     * إدارة تسجيل اللاعبين وضغط الجرس بدقة أجزاء الثانية
-     * =========================================================================
-     */
-    function selectPlayerTeam(team) {
-      playerSession.team = team;
-      const gBtn = document.getElementById('pickGreenTeamBtn');
-      const rBtn = document.getElementById('pickRedTeamBtn');
+    const GameEngine = {
+      timerRef: null,
 
-      if (team === 'green') {
-        gBtn.className = 'py-3 px-3 rounded-2xl border-2 border-emerald-400 bg-emerald-950/90 text-emerald-200 font-black text-sm transition';
-        rBtn.className = 'py-3 px-3 rounded-2xl border-2 border-slate-700 bg-slate-900 text-slate-300 font-black text-sm transition';
-      } else {
-        rBtn.className = 'py-3 px-3 rounded-2xl border-2 border-red-400 bg-red-950/90 text-red-200 font-black text-sm transition';
-        gBtn.className = 'py-3 px-3 rounded-2xl border-2 border-slate-700 bg-slate-900 text-slate-300 font-black text-sm transition';
-      }
-    }
+      buildFreshBoard(playAudio = true) {
+        const pool = [...LETTERS_28].sort(() => Math.random() - 0.5).slice(0, 25);
+        gameState.cells = pool.map((letter) => ({ letter, owner: null }));
+        gameState.selectedIdx = null;
+        gameState.qIndex = 0;
+        gameState.buzzQueue = [];
+        if (playAudio) SoundEngine.shuffle();
+        commitState(false);
+      },
 
-    function joinPlayerRoom() {
-      initAudio();
-      const input = document.getElementById('playerNameInput');
-      const cleanName = input.value.trim();
-      if (!cleanName) {
-        showToast('⚠️ الرجاء كتابة اسمك أولاً');
-        input.focus();
-        return;
-      }
+      newBoard() {
+        this.stopTimer();
+        gameState.timer = 15;
+        this.buildFreshBoard(true);
+      },
 
-      playerSession.name = cleanName;
-      playerSession.joined = true;
-
-      const latest = loadLocalRoomSnapshot(gameState.roomCode);
-      if (latest) applyIncomingState(latest, null, true);
-
-      gameState.players[playerSession.id] = {
-        id: playerSession.id,
-        name: playerSession.name,
-        team: playerSession.team
-      };
-
-      document.getElementById('playerJoinCard').classList.add('hidden');
-      document.getElementById('playerActivePad').classList.remove('hidden');
-      document.getElementById('playerPadName').textContent = playerSession.name;
-
-      const badge = document.getElementById('playerPadTeamBadge');
-      if (playerSession.team === 'green') {
-        badge.textContent = `🟢 ${gameState.greenName}`;
-        badge.className = 'px-3 py-1 rounded-xl font-black text-xs bg-emerald-600 text-white';
-      } else {
-        badge.textContent = `🔴 ${gameState.redName}`;
-        badge.className = 'px-3 py-1 rounded-xl font-black text-xs bg-red-600 text-white';
-      }
-
-      if (broadcastChan) {
-        broadcastChan.postMessage({
-          type: 'PLAYER_JOIN',
-          senderId: instanceId,
-          player: gameState.players[playerSession.id]
-        });
-      }
-
-      pushStateUpdate(null);
-      showToast(`أهلاً بك يا ${playerSession.name}! تم تسجيلك في الغرفة`);
-    }
-
-    function handleRemotePlayerJoin(player) {
-      if (!player || !player.id) return;
-      gameState.players[player.id] = player;
-      saveLocalRoomSnapshot(buildSyncPayload());
-      syncAllUIs();
-    }
-
-    function leavePlayerRoom() {
-      playerSession.joined = false;
-      document.getElementById('playerActivePad').classList.add('hidden');
-      document.getElementById('playerJoinCard').classList.remove('hidden');
-    }
-
-    function triggerPlayerBuzz() {
-      if (!playerSession.joined) return;
-      initAudio();
-
-      // حساب التوقيت الدقيق بالميلي ثانية
-      const exactMs = performance.timeOrigin ? (performance.timeOrigin + performance.now()) : Date.now();
-
-      const latest = loadLocalRoomSnapshot(gameState.roomCode);
-      if (latest) {
-        gameState.buzzQueue = latest.buzzQueue || [];
-        gameState.players = latest.players || gameState.players;
-      }
-
-      // منع تكرار الضغط لنفس اللاعب في نفس الجولة
-      if (gameState.buzzQueue.some(item => item.playerId === playerSession.id)) {
-        return;
-      }
-
-      const entry = {
-        playerId: playerSession.id,
-        name: playerSession.name,
-        team: playerSession.team,
-        exactMs
-      };
-
-      gameState.buzzQueue.push(entry);
-      gameState.buzzQueue.sort((a, b) => a.exactMs - b.exactMs);
-      gameState.buzzerLocked = true;
-      gameState.timerPaused = true;
-
-      SFX.buzz();
-
-      if (broadcastChan) {
-        broadcastChan.postMessage({
-          type: 'PLAYER_BUZZ',
-          senderId: instanceId,
-          buzzEntry: entry
-        });
-      }
-
-      pushStateUpdate('buzz');
-    }
-
-    function handleRemotePlayerBuzz(entry) {
-      if (!entry || !entry.playerId) return;
-      if (!gameState.buzzQueue.some(item => item.playerId === entry.playerId)) {
-        gameState.buzzQueue.push(entry);
-        gameState.buzzQueue.sort((a, b) => a.exactMs - b.exactMs);
-      }
-      gameState.buzzerLocked = true;
-      gameState.timerPaused = true;
-      saveLocalRoomSnapshot(buildSyncPayload());
-      if (gameState.viewMode !== 'player') {
-        SFX.buzz();
-      }
-      syncAllUIs();
-    }
-
-    function unlockBuzzer(shouldBroadcast = true) {
-      gameState.buzzQueue = [];
-      gameState.buzzerLocked = false;
-      gameState.timerPaused = false;
-      if (shouldBroadcast) {
-        pushStateUpdate('select');
-      } else {
-        syncAllUIs();
-      }
-      showToast('🔓 تم فتح الجرس لجميع المتسابقين');
-    }
-
-    /**
-     * =========================================================================
-     * التحكم باللوحة والأسئلة والمؤقت
-     * =========================================================================
-     */
-    function generateRandomRoom() {
-      const code = Math.floor(1000 + Math.random() * 9000).toString();
-      document.getElementById('roomCodeInput').value = code;
-      gameState.roomCode = code;
-    }
-
-    function getModeUrl(mode) {
-      const code = (document.getElementById('roomCodeInput')?.value || gameState.roomCode || '2026').trim().toUpperCase();
-      const customBaseRaw = (document.getElementById('qrCustomBaseInput')?.value || '').trim();
-
-      let url;
-      if (customBaseRaw) {
-        try {
-          const normalizedBase = /^https?:\/\//i.test(customBaseRaw) ? customBaseRaw : `https://${customBaseRaw}`;
-          url = new URL(normalizedBase);
-        } catch (err) {
-          url = new URL(window.location.href);
+      clickCell(idx) {
+        if (currentView === 'host') {
+          gameState.selectedIdx = idx;
+          gameState.qIndex = 0;
+          gameState.buzzQueue = [];
+          SoundEngine.select();
+          commitState(false);
+        } else if (currentView === 'board') {
+          gameState.selectedIdx = idx;
+          SoundEngine.select();
+          commitState(false);
         }
-      } else {
-        url = new URL(window.location.href);
-      }
+      },
 
-      // تنظيف أي مسارات فرعية في بيئة المعاينة إذا كان البروتوكول blob/about أو غير قياسي
-      if (url.protocol === 'about:' || url.protocol === 'blob:') {
-        url = new URL('https://horoof-game.local/index.html');
-      }
+      nextQuestion() {
+        if (gameState.selectedIdx === null) return;
+        const ch = gameState.cells[gameState.selectedIdx].letter;
+        const list = QUESTIONS_BANK[ch] || [];
+        if (list.length) {
+          gameState.qIndex = (gameState.qIndex + 1) % list.length;
+          SoundEngine.select();
+          commitState(false);
+        }
+      },
 
-      url.searchParams.set('mode', mode);
-      url.searchParams.set('room', code);
-      return url.toString();
-    }
+      setOwner(team) {
+        if (gameState.selectedIdx === null) return;
+        gameState.cells[gameState.selectedIdx].owner = team;
+        gameState.selectedIdx = null;
+        gameState.buzzQueue = [];
+        this.stopTimer();
+        SoundEngine.correct();
+        commitState(false);
 
-    function copyModeLink(mode) {
-      const link = getModeUrl(mode);
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(link).catch(() => {});
-      }
-      const tempInput = document.createElement('input');
-      tempInput.value = link;
-      document.body.appendChild(tempInput);
-      tempInput.select();
-      try {
-        document.execCommand('copy');
-      } catch (e) {}
-      document.body.removeChild(tempInput);
+        const winPath = this.findWinningPath(team);
+        if (winPath) {
+          if (team === 'green') gameState.greenScore += 1;
+          else gameState.redScore += 1;
+          SoundEngine.win();
+          commitState(false);
+          openWinModal(team);
+        }
+      },
 
-      const names = {
-        board: 'شاشة اللوحة فقط',
-        host: 'لوحة تحكم المقدم',
-        player: 'جرس المتسابق'
-      };
-      showToast(`📋 تم نسخ رابط (${names[mode] || mode})`);
-    }
+      clearCell() {
+        if (gameState.selectedIdx === null) return;
+        gameState.cells[gameState.selectedIdx].owner = null;
+        commitState(false);
+      },
 
-    function renderFallbackQRImage(container, targetUrl, size = 184) {
-      // بديل موثوق لتوليد صورة QR إذا لم تُحمّل مكتبة qrcodejs أو فشل الرسم على Canvas
-      const img = document.createElement('img');
-      img.width = size;
-      img.height = size;
-      img.alt = 'QR Code';
-      img.className = 'block rounded-lg';
-      img.src = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&margin=8&data=${encodeURIComponent(targetUrl)}`;
-      img.onerror = () => {
-        container.innerHTML = `
-          <div class="w-[184px] h-[184px] flex flex-col items-center justify-center text-slate-900 text-xs font-bold p-2 border-2 border-dashed border-slate-400 rounded-xl bg-slate-50">
-            <span class="text-2xl mb-1">📱</span>
-            <span>تعذر تحميل صورة الباركود</span>
-            <span class="text-[10px] text-slate-600 mt-1">انسخ الرابط بالأسفل وافتحه مباشرة</span>
-          </div>
-        `;
-      };
-      container.innerHTML = '';
-      container.appendChild(img);
-    }
+      passQuestion() {
+        gameState.buzzQueue = [];
+        SoundEngine.pass();
+        commitState(false);
+      },
 
-    function renderQRCodeForCurrentRoom() {
-      const code = (document.getElementById('roomCodeInput')?.value || gameState.roomCode || '2026').trim().toUpperCase();
-      gameState.roomCode = code;
+      resetBuzz() {
+        gameState.buzzQueue = [];
+        SoundEngine.select();
+        commitState(false);
+      },
 
-      const playerUrl = getModeUrl('player');
-      document.getElementById('qrRoomCodeText').textContent = code;
-      document.getElementById('qrLinkPreview').textContent = playerUrl;
-
-      const container = document.getElementById('qrcodeContainer');
-      container.innerHTML = '';
-
-      let renderedViaLib = false;
-      if (typeof QRCode !== 'undefined') {
-        try {
-          new QRCode(container, {
-            text: playerUrl,
-            width: 184,
-            height: 184,
-            colorDark: '#07090f',
-            colorLight: '#ffffff',
-            correctLevel: QRCode.CorrectLevel.M
-          });
-
-          // التحقق بعد لحظة قصيرة من وجود canvas أو img داخل الحاوية
-          setTimeout(() => {
-            const hasCanvas = container.querySelector('canvas');
-            const hasImg = container.querySelector('img');
-            if (!hasCanvas && !hasImg) {
-              renderFallbackQRImage(container, playerUrl, 184);
+      startTimer() {
+        this.stopTimer();
+        this.timerRef = setInterval(() => {
+          if (gameState.timer > 0) {
+            gameState.timer -= 1;
+            if (gameState.timer > 0 && gameState.timer <= 5) SoundEngine.tick();
+            if (gameState.timer === 0) {
+              SoundEngine.pass();
+              this.stopTimer();
             }
-          }, 80);
-          renderedViaLib = true;
-        } catch (err) {
-          renderedViaLib = false;
-        }
-      }
-
-      if (!renderedViaLib) {
-        renderFallbackQRImage(container, playerUrl, 184);
-      }
-    }
-
-    function openQRModal() {
-      const code = (document.getElementById('roomCodeInput')?.value || gameState.roomCode || '2026').trim().toUpperCase();
-      gameState.roomCode = code;
-      setupRoomSync(code);
-      renderQRCodeForCurrentRoom();
-      openModal('qrModal');
-    }
-
-    function enterMode(mode) {
-      initAudio();
-      const inputCode = (document.getElementById('roomCodeInput').value || gameState.roomCode || '2026').trim().toUpperCase();
-      gameState.roomCode = inputCode;
-      gameState.viewMode = mode;
-
-      try {
-        const url = new URL(window.location.href);
-        url.searchParams.set('mode', mode);
-        url.searchParams.set('room', gameState.roomCode);
-        window.history.replaceState({}, '', url);
-      } catch (e) {}
-
-      document.getElementById('launcherView').classList.add('hidden');
-      document.getElementById('boardOnlyView').classList.add('hidden');
-      document.getElementById('hostControlView').classList.add('hidden');
-      document.getElementById('playerBuzzerView').classList.add('hidden');
-
-      setupRoomSync(gameState.roomCode);
-
-      if (mode === 'board') {
-        document.getElementById('boardOnlyView').classList.remove('hidden');
-        document.getElementById('boardRoomBadge').textContent = gameState.roomCode;
-        if (!gameState.board.length) startNewBoard(false);
-      } else if (mode === 'host') {
-        document.getElementById('hostControlView').classList.remove('hidden');
-        document.getElementById('hostRoomBadge').textContent = gameState.roomCode;
-        if (!gameState.board.length) startNewBoard(true);
-      } else if (mode === 'player') {
-        document.getElementById('playerBuzzerView').classList.remove('hidden');
-        document.getElementById('playerRoomBadge').textContent = gameState.roomCode;
-        if (!gameState.board.length) startNewBoard(false);
-      }
-
-      syncAllUIs();
-    }
-
-    function backToLauncher() {
-      stopTimerLoop();
-      gameState.viewMode = 'launcher';
-      document.getElementById('boardOnlyView').classList.add('hidden');
-      document.getElementById('hostControlView').classList.add('hidden');
-      document.getElementById('playerBuzzerView').classList.add('hidden');
-      document.getElementById('launcherView').classList.remove('hidden');
-    }
-
-    function shuffleArray(arr) {
-      const copy = [...arr];
-      for (let i = copy.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [copy[i], copy[j]] = [copy[j], copy[i]];
-      }
-      return copy;
-    }
-
-    function startNewBoard(shouldBroadcast = true) {
-      stopTimerLoop();
-      SFX.shuffle();
-
-      const shuffled = shuffleArray(ARABIC_ALPHABET);
-      const boardLetters = shuffled.slice(0, 25);
-      gameState.unusedLetters = shuffled.slice(25);
-
-      gameState.board = [];
-      let idx = 0;
-      for (let r = 0; r < ROWS; r++) {
-        const row = [];
-        for (let c = 0; c < COLS; c++) {
-          row.push({ r, c, letter: boardLetters[idx++], owner: null });
-        }
-        gameState.board.push(row);
-      }
-
-      gameState.activeCell = null;
-      gameState.roundOver = false;
-      gameState.winningCells = [];
-      gameState.buzzQueue = [];
-      gameState.buzzerLocked = false;
-      gameState.timeLeft = gameState.timerDuration;
-
-      if (shouldBroadcast) {
-        pushStateUpdate('shuffle');
-      } else {
-        syncAllUIs();
-      }
-    }
-
-    function renderSvgBoard(svgId, isInteractiveHost = false) {
-      const svg = document.getElementById(svgId);
-      if (!svg || !gameState.board.length) return;
-      svg.innerHTML = '';
-
-      // الحدود الخارجية الخضراء والحمراء
-      for (let c = -2; c <= COLS + 1; c++) {
-        for (let r = -1; r <= ROWS; r++) {
-          if (r >= 0 && r < ROWS && c >= 0 && c < COLS) continue;
-          const { cx, cy } = getHexCenter(r, c);
-          const borderFill = (c >= 0 && c < COLS && (r < 0 || r >= ROWS)) ? '#008000' : '#e60000';
-          const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-          poly.setAttribute('points', getFlatTopHexPoints(cx, cy));
-          poly.setAttribute('fill', borderFill);
-          poly.setAttribute('class', 'hex-poly');
-          svg.appendChild(poly);
-        }
-      }
-
-      // الخلايا الـ 25
-      for (let r = 0; r < ROWS; r++) {
-        for (let c = 0; c < COLS; c++) {
-          const cell = gameState.board[r][c];
-          const { cx, cy } = getHexCenter(r, c);
-
-          const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-          const isSelected = gameState.activeCell && gameState.activeCell.r === r && gameState.activeCell.c === c;
-          const isWinning = gameState.winningCells.some(w => w.r === r && w.c === c);
-
-          const classes = [];
-          if (isInteractiveHost) classes.push('playable-hex');
-          if (isSelected) classes.push('hex-active');
-          if (isWinning) classes.push('hex-winning');
-          group.setAttribute('class', classes.join(' '));
-
-          let fillColor = '#fef9c3';
-          let textColor = '#000000';
-
-          if (cell.owner === 'green') {
-            fillColor = '#008000';
-            textColor = '#ffffff';
-          } else if (cell.owner === 'red') {
-            fillColor = '#e60000';
-            textColor = '#ffffff';
-          } else if (isSelected) {
-            fillColor = '#facc15';
-            textColor = '#000000';
+            commitState(false);
+          } else {
+            this.stopTimer();
           }
+        }, 1000);
+      },
 
-          const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-          poly.setAttribute('points', getFlatTopHexPoints(cx, cy));
-          poly.setAttribute('fill', fillColor);
-          poly.setAttribute('class', 'hex-poly');
+      stopTimer() {
+        clearInterval(this.timerRef);
+        this.timerRef = null;
+      },
 
-          const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-          text.setAttribute('x', cx);
-          text.setAttribute('y', cy + 2);
-          text.setAttribute('fill', textColor);
-          text.setAttribute('class', 'hex-text');
-          text.textContent = cell.letter;
+      resetTimer() {
+        this.stopTimer();
+        gameState.timer = 15;
+        commitState(false);
+      },
 
-          group.appendChild(poly);
-          group.appendChild(text);
-
-          if (isInteractiveHost) {
-            group.addEventListener('click', () => handleHostCellClick(r, c));
-          }
-
-          svg.appendChild(group);
+      getHexNeighbors(r, c) {
+        const even = [[-1, 0], [-1, 1], [0, -1], [0, 1], [1, 0], [1, 1]];
+        const odd  = [[-1, -1], [-1, 0], [0, -1], [0, 1], [1, -1], [1, 0]];
+        const dirs = (r % 2 === 0) ? even : odd;
+        const out = [];
+        for (const [dr, dc] of dirs) {
+          const nr = r + dr, nc = c + dc;
+          if (nr >= 0 && nr < 5 && nc >= 0 && nc < 5) out.push(nr * 5 + nc);
         }
+        return out;
+      },
+
+      findWinningPath(team) {
+        const queue = [];
+        const seen = new Set();
+
+        for (let i = 0; i < 25; i++) {
+          const r = Math.floor(i / 5);
+          const c = i % 5;
+          if (gameState.cells[i]?.owner === team) {
+            const starts = (team === 'green' && r === 0) || (team === 'red' && c === 0);
+            if (starts) {
+              queue.push([i]);
+              seen.add(i);
+            }
+          }
+        }
+
+        while (queue.length > 0) {
+          const path = queue.shift();
+          const last = path[path.length - 1];
+          const r = Math.floor(last / 5);
+          const c = last % 5;
+
+          const reached = (team === 'green' && r === 4) || (team === 'red' && c === 4);
+          if (reached) return path;
+
+          for (const nxt of this.getHexNeighbors(r, c)) {
+            if (!seen.has(nxt) && gameState.cells[nxt]?.owner === team) {
+              seen.add(nxt);
+              queue.push([...path, nxt]);
+            }
+          }
+        }
+        return null;
       }
-    }
+    };
 
-    function handleHostCellClick(r, c) {
-      const cell = gameState.board[r][c];
-      if (cell.owner) {
-        gameState.editingCell = { r, c };
-        document.getElementById('editCellLetter').textContent = cell.letter;
-        openModal('editCellModal');
-        return;
-      }
+    const PlayerApp = {
+      pid: 'u_' + Math.random().toString(36).slice(2, 9),
+      name: '',
+      team: 'green',
 
-      if (gameState.roundOver) return;
-
-      SFX.select();
-      gameState.activeCell = { r, c };
-      gameState.contestingTeam = gameState.currentTurn;
-      gameState.buzzQueue = [];
-      gameState.buzzerLocked = false;
-
-      const list = QUESTION_BANK[cell.letter] || [];
-      gameState.currentQuestionIndex = list.length ? Math.floor(Math.random() * list.length) : 0;
-
-      startTimerLoop(false);
-      pushStateUpdate('select');
-    }
-
-    function overrideCellOwner(newOwner) {
-      if (!gameState.editingCell) return;
-      const { r, c } = gameState.editingCell;
-      gameState.board[r][c].owner = newOwner;
-      gameState.editingCell = null;
-      closeModal('editCellModal');
-
-      gameState.winningCells = [];
-      gameState.roundOver = false;
-      const gWin = checkWinCondition('green');
-      const rWin = checkWinCondition('red');
-      if (gWin) {
-        gameState.roundOver = true;
-        gameState.winningCells = gWin;
-      } else if (rWin) {
-        gameState.roundOver = true;
-        gameState.winningCells = rWin;
-      }
-
-      pushStateUpdate('select');
-    }
-
-    function selectSpecificQuestion(idx) {
-      gameState.currentQuestionIndex = idx;
-      resetTimer(true);
-      SFX.select();
-    }
-
-    function nextQuestionSameLetter() {
-      if (!gameState.activeCell) return;
-      gameState.currentQuestionIndex++;
-      resetTimer(true);
-      SFX.select();
-    }
-
-    function passQuestionToOtherTeam() {
-      if (!gameState.activeCell) return;
-      SFX.pass();
-      gameState.contestingTeam = gameState.contestingTeam === 'green' ? 'red' : 'green';
-      gameState.buzzQueue = [];
-      gameState.buzzerLocked = false;
-      resetTimer(true);
-    }
-
-    function cancelCellSelection(replaceLetter = true) {
-      if (!gameState.activeCell) return;
-      stopTimerLoop();
-      if (replaceLetter && gameState.unusedLetters.length > 0) {
-        const { r, c } = gameState.activeCell;
-        const oldLetter = gameState.board[r][c].letter;
-        const nextLetter = gameState.unusedLetters.shift();
-        gameState.unusedLetters.push(oldLetter);
-        gameState.board[r][c].letter = nextLetter;
-      }
-      gameState.activeCell = null;
-      gameState.buzzQueue = [];
-      gameState.buzzerLocked = false;
-      gameState.currentTurn = gameState.currentTurn === 'green' ? 'red' : 'green';
-      pushStateUpdate('pass');
-    }
-
-    function claimCell(team) {
-      if (!gameState.activeCell || gameState.roundOver) return;
-      stopTimerLoop();
-
-      const { r, c } = gameState.activeCell;
-      gameState.board[r][c].owner = team;
-      gameState.activeCell = null;
-      gameState.buzzQueue = [];
-      gameState.buzzerLocked = false;
-      gameState.currentTurn = team;
-
-      const winPath = checkWinCondition(team);
-      if (winPath) {
-        gameState.roundOver = true;
-        gameState.winningCells = winPath;
-        if (team === 'green') gameState.greenScore++;
-        else gameState.redScore++;
-
-        pushStateUpdate('win');
-        triggerWinCelebration(team);
-        return;
-      }
-
-      pushStateUpdate('correct');
-    }
-
-    /**
-     * المؤقت
-     */
-    function startTimerLoop(shouldBroadcast = true) {
-      stopTimerLoop();
-      gameState.timeLeft = gameState.timerDuration;
-      gameState.timerRunning = true;
-      gameState.timerPaused = false;
-      updateTimerDisplays();
-
-      timerInterval = setInterval(() => {
-        if (!gameState.timerRunning || gameState.timerPaused) return;
-        gameState.timeLeft = Math.max(0, gameState.timeLeft - 1);
-        updateTimerDisplays();
-
-        if (gameState.timeLeft > 5) {
-          SFX.tick();
-        } else if (gameState.timeLeft > 0) {
-          SFX.urgentTick();
-        } else {
-          SFX.timeUp();
-          stopTimerLoop();
-          pushStateUpdate('timeUp');
+      register() {
+        SoundEngine.ensure();
+        const val = document.getElementById('playerNameInput').value.trim();
+        if (!val) {
+          alert('اكتب اسمك أولاً');
           return;
         }
+        this.name = val;
+        const checked = document.querySelector('input[name="pTeam"]:checked');
+        this.team = checked ? checked.value : 'green';
 
-        if (gameState.viewMode === 'host') {
-          const snap = buildSyncPayload();
-          saveLocalRoomSnapshot(snap);
-          if (broadcastChan) {
-            broadcastChan.postMessage({ type: 'STATE_SYNC', senderId: instanceId, state: snap });
-          }
-        }
-      }, 1000);
+        loadRoomState();
+        gameState.players[this.pid] = { name: this.name, team: this.team };
+        commitState(false);
 
-      if (shouldBroadcast) pushStateUpdate(null);
-    }
+        document.getElementById('playerJoinBox').classList.add('hidden');
+        document.getElementById('playerPadBox').classList.remove('hidden');
+        document.getElementById('pNameLabel').textContent = this.name;
+        const badge = document.getElementById('pTeamBadge');
+        badge.textContent = this.team === 'green' ? '🟢 الأخضر' : '🔴 الأحمر';
+        badge.className = 'chip ' + (this.team === 'green' ? 'g' : 'r');
+        SoundEngine.select();
+        renderUI();
+      },
 
-    function stopTimerLoop() {
-      if (timerInterval) {
-        clearInterval(timerInterval);
-        timerInterval = null;
-      }
-      gameState.timerRunning = false;
-    }
+      pressBuzz() {
+        SoundEngine.ensure();
+        if (!this.name) return;
+        loadRoomState();
 
-    function resetTimer(shouldBroadcast = true) {
-      startTimerLoop(shouldBroadcast);
-    }
+        if (gameState.buzzQueue.some((item) => item.pid === this.pid)) return;
 
-    function togglePauseTimer() {
-      gameState.timerPaused = !gameState.timerPaused;
-      updateTimerDisplays();
-      pushStateUpdate(null);
-    }
+        const preciseTime = Date.now() + ((performance.now() % 1) || 0);
+        gameState.buzzQueue.push({
+          pid: this.pid,
+          name: this.name,
+          team: this.team,
+          ts: preciseTime
+        });
+        gameState.buzzQueue.sort((a, b) => a.ts - b.ts);
 
-    function updateTimerDisplays() {
-      const hostDisp = document.getElementById('hostTimerDisplay');
-      const boardDisp = document.getElementById('boardTimerText');
-      const pauseBtn = document.getElementById('hostPauseBtn');
-
-      if (hostDisp) hostDisp.textContent = gameState.timeLeft;
-      if (boardDisp) boardDisp.textContent = gameState.timeLeft;
-      if (pauseBtn) pauseBtn.textContent = gameState.timerPaused ? 'استئناف' : 'إيقاف';
-    }
-
-    /**
-     * خوارزمية BFS لاكتشاف الفوز
-     */
-    function getHexNeighbors(r, c) {
-      const isOddCol = (c % 2 !== 0);
-      const deltas = isOddCol
-        ? [[-1, 0], [1, 0], [0, -1], [1, -1], [0, 1], [1, 1]]
-        : [[-1, 0], [1, 0], [-1, -1], [0, -1], [-1, 1], [0, 1]];
-
-      const list = [];
-      for (const [dr, dc] of deltas) {
-        const nr = r + dr;
-        const nc = c + dc;
-        if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) {
-          list.push({ r: nr, c: nc });
-        }
-      }
-      return list;
-    }
-
-    function checkWinCondition(team) {
-      const queue = [];
-      const visited = Array.from({ length: ROWS }, () => Array(COLS).fill(false));
-      const parent = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
-
-      if (team === 'green') {
-        for (let c = 0; c < COLS; c++) {
-          if (gameState.board[0][c].owner === 'green') {
-            queue.push({ r: 0, c });
-            visited[0][c] = true;
-          }
-        }
-      } else {
-        for (let r = 0; r < ROWS; r++) {
-          if (gameState.board[r][0].owner === 'red') {
-            queue.push({ r, c: 0 });
-            visited[r][0] = true;
-          }
-        }
-      }
-
-      while (queue.length > 0) {
-        const curr = queue.shift();
-        const reached = (team === 'green' && curr.r === ROWS - 1) ||
-                        (team === 'red' && curr.c === COLS - 1);
-        if (reached) {
-          const path = [];
-          let trace = curr;
-          while (trace) {
-            path.push(trace);
-            trace = parent[trace.r][trace.c];
-          }
-          return path;
+        if (navigator.vibrate) {
+          try { navigator.vibrate(120); } catch (_) {}
         }
 
-        for (const nxt of getHexNeighbors(curr.r, curr.c)) {
-          if (!visited[nxt.r][nxt.c] && gameState.board[nxt.r][nxt.c].owner === team) {
-            visited[nxt.r][nxt.c] = true;
-            parent[nxt.r][nxt.c] = curr;
-            queue.push(nxt);
-          }
-        }
+        SoundEngine.buzz();
+        commitState(true);
+      },
+
+      changeName() {
+        document.getElementById('playerPadBox').classList.add('hidden');
+        document.getElementById('playerJoinBox').classList.remove('hidden');
       }
-      return null;
+    };
+
+    function pickTeam(team) {
+      document.querySelectorAll('input[name="pTeam"]').forEach((r) => {
+        r.checked = (r.value === team);
+      });
+      document.getElementById('lblGreen').classList.toggle('checked-g', team === 'green');
+      document.getElementById('lblRed').classList.toggle('checked-r', team === 'red');
     }
 
-    function triggerWinCelebration(team) {
-      SFX.win();
-      launchConfetti(team === 'green' ? '#16a34a' : '#dc2626');
-
-      const modal = document.getElementById('winModal');
-      const title = document.getElementById('winTitle');
-      const subtitle = document.getElementById('winSubtitle');
-      const icon = document.getElementById('winBadgeIcon');
-
-      if (team === 'green') {
-        icon.className = 'w-20 h-20 mx-auto rounded-full bg-emerald-600 flex items-center justify-center text-4xl mb-4 shadow-lg border-4 border-emerald-200';
-        title.textContent = `🏆 مبروك لـ ${gameState.greenName}!`;
-        subtitle.textContent = 'أكمل مساراً متصلاً من الأعلى إلى الأسفل وفاز بالجولة!';
-      } else {
-        icon.className = 'w-20 h-20 mx-auto rounded-full bg-red-600 flex items-center justify-center text-4xl mb-4 shadow-lg border-4 border-red-200';
-        title.textContent = `🏆 مبروك لـ ${gameState.redName}!`;
-        subtitle.textContent = 'أكمل مساراً متصلاً من اليمين إلى اليسار وفاز بالجولة!';
-      }
-
-      modal.classList.remove('hidden');
-      modal.classList.add('flex');
-    }
-
-    function launchConfetti(primaryColor) {
-      const colors = [primaryColor, '#fde047', '#ffffff', '#f59e0b'];
-      for (let i = 0; i < 75; i++) {
-        const piece = document.createElement('div');
-        piece.className = 'confetti-piece rounded-sm';
-        piece.style.left = Math.random() * 100 + 'vw';
-        piece.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-        piece.style.animationDuration = (Math.random() * 2 + 1.6) + 's';
-        document.body.appendChild(piece);
-        setTimeout(() => piece.remove(), 3800);
-      }
-    }
-
-    /**
-     * =========================================================================
-     * مزامنة جميع الواجهات (اللوحة، المقدم، وجوال المتسابق)
-     * =========================================================================
-     */
-    function syncAllUIs() {
-      renderSvgBoard('boardMainSvg', false);
-      renderSvgBoard('hostMiniSvg', true);
-
-      document.getElementById('boardGreenName').textContent = gameState.greenName;
-      document.getElementById('boardRedName').textContent = gameState.redName;
+    function renderUI() {
       document.getElementById('boardGreenScore').textContent = gameState.greenScore;
       document.getElementById('boardRedScore').textContent = gameState.redScore;
-
-      document.getElementById('hostGreenNameLabel').textContent = gameState.greenName;
-      document.getElementById('hostRedNameLabel').textContent = gameState.redName;
       document.getElementById('hostGreenScore').textContent = gameState.greenScore;
       document.getElementById('hostRedScore').textContent = gameState.redScore;
 
-      // تمييز الفريق صاحب الدور
-      const activeTeam = gameState.activeCell ? gameState.contestingTeam : gameState.currentTurn;
-      const gCard = document.getElementById('boardGreenCard');
-      const rCard = document.getElementById('boardRedCard');
-      const hostBanner = document.getElementById('hostTurnBanner');
+      const tVal = gameState.timer;
+      const bTimer = document.getElementById('boardTimer');
+      bTimer.textContent = tVal;
+      bTimer.classList.toggle('danger', tVal <= 5);
+      document.getElementById('hostTimer').textContent = tVal;
 
-      if (activeTeam === 'green') {
-        gCard.className = 'flex items-center gap-3 px-4 py-1.5 rounded-xl border-2 border-emerald-400 bg-emerald-950/90 shadow-[0_0_20px_rgba(16,185,129,0.25)] transition-all';
-        rCard.className = 'flex items-center gap-3 px-4 py-1.5 rounded-xl border-2 border-transparent bg-slate-950/70 transition-all';
-        hostBanner.className = 'mb-3 px-3 py-2 rounded-xl bg-emerald-950/90 border border-emerald-500/50 text-center text-xs sm:text-sm font-black text-emerald-200';
-        hostBanner.textContent = `الدور الحالي: ${gameState.greenName} (أعلى ↕ أسفل)`;
+      paintBoard('boardHexGrid');
+      paintBoard('hostMiniGrid');
+
+      if (gameState.selectedIdx !== null && gameState.cells[gameState.selectedIdx]) {
+        const cell = gameState.cells[gameState.selectedIdx];
+        const qList = QUESTIONS_BANK[cell.letter] || [];
+        const qObj = qList[gameState.qIndex % Math.max(qList.length, 1)] || { q: 'سؤال حر', a: '---' };
+        document.getElementById('hostLetterBadge').textContent = cell.letter;
+        document.getElementById('hostQCounter').textContent = qList.length ? `سؤال ${(gameState.qIndex % qList.length) + 1} من ${qList.length}` : '';
+        document.getElementById('hostQuestion').textContent = qObj.q;
+        document.getElementById('hostAnswer').textContent = qObj.a;
       } else {
-        rCard.className = 'flex items-center gap-3 px-4 py-1.5 rounded-xl border-2 border-red-400 bg-red-950/90 shadow-[0_0_20px_rgba(239,68,68,0.25)] transition-all';
-        gCard.className = 'flex items-center gap-3 px-4 py-1.5 rounded-xl border-2 border-transparent bg-slate-950/70 transition-all';
-        hostBanner.className = 'mb-3 px-3 py-2 rounded-xl bg-red-950/90 border border-red-500/50 text-center text-xs sm:text-sm font-black text-red-200';
-        hostBanner.textContent = `الدور الحالي: ${gameState.redName} (يمين ↔ يسار)`;
+        document.getElementById('hostLetterBadge').textContent = '-';
+        document.getElementById('hostQCounter').textContent = '';
+        document.getElementById('hostQuestion').textContent = 'اختر حرفاً من اللوحة لعرض السؤال والإجابة';
+        document.getElementById('hostAnswer').textContent = '---';
       }
 
-      // لافتة الجرس على شاشة العرض
-      const buzzBanner = document.getElementById('boardBuzzBanner');
+      const alertBox = document.getElementById('boardBuzzAlert');
       if (gameState.buzzQueue.length > 0) {
-        const first = gameState.buzzQueue[0];
-        buzzBanner.classList.remove('hidden');
-        document.getElementById('boardBuzzWinnerName').textContent = first.name;
-        const teamBadge = document.getElementById('boardBuzzWinnerTeam');
-        if (first.team === 'green') {
-          teamBadge.textContent = `🟢 ${gameState.greenName}`;
-          teamBadge.className = 'px-4 py-1.5 rounded-xl font-black text-sm sm:text-base bg-emerald-600 text-white shadow';
-        } else {
-          teamBadge.textContent = `🔴 ${gameState.redName}`;
-          teamBadge.className = 'px-4 py-1.5 rounded-xl font-black text-sm sm:text-base bg-red-600 text-white shadow';
-        }
+        const top = gameState.buzzQueue[0];
+        alertBox.classList.remove('hidden');
+        document.getElementById('boardBuzzName').textContent = top.name;
+        document.getElementById('boardBuzzSub').textContent =
+          `${top.team === 'green' ? '🟢 الفريق الأخضر' : '🔴 الفريق الأحمر'} — الأسرع على الجرس!`;
       } else {
-        buzzBanner.classList.add('hidden');
+        alertBox.classList.add('hidden');
       }
 
-      // قائمة ترتيب الجرس للمقدم
-      const queueList = document.getElementById('hostBuzzQueueList');
-      if (gameState.buzzQueue.length === 0) {
-        queueList.innerHTML = '<p class="text-slate-500 text-center py-4">لم يضغط أحد على الجرس بعد...</p>';
+      const buzzListEl = document.getElementById('hostBuzzList');
+      if (!gameState.buzzQueue.length) {
+        buzzListEl.innerHTML = '<div class="muted">لا توجد ضغطات بعد...</div>';
       } else {
-        const fastestMs = gameState.buzzQueue[0].exactMs;
-        queueList.innerHTML = gameState.buzzQueue.map((item, idx) => {
-          const diffSeconds = ((item.exactMs - fastestMs) / 1000).toFixed(3);
-          const diffText = idx === 0 ? '⚡ الأسرع' : `+${diffSeconds} ث`;
-          const colorCls = item.team === 'green' ? 'border-emerald-500 text-emerald-200' : 'border-red-500 text-red-200';
+        const firstTs = gameState.buzzQueue[0].ts;
+        buzzListEl.innerHTML = gameState.buzzQueue.map((item, i) => {
+          const diff = ((item.ts - firstTs) / 1000).toFixed(3);
+          const tag = i === 0 ? '⚡ الأسرع' : `+${diff} ث`;
+          const teamTxt = item.team === 'green' ? '🟢' : '🔴';
           return `
-            <div class="flex items-center justify-between bg-slate-900 border-r-4 ${colorCls} rounded-xl px-3 py-2">
-              <span class="font-black">#${idx + 1} ${item.name}</span>
-              <span class="font-extrabold text-amber-300">${diffText}</span>
+            <div class="buzz-row ${item.team}">
+              <span>#${i + 1} ${teamTxt} ${escapeHtml(item.name)}</span>
+              <span>${tag}</span>
             </div>
           `;
         }).join('');
       }
 
-      // عرض المتسابقين المسجلين على اللوحة والمقدم
+      const gRoster = document.getElementById('boardGreenRoster');
+      const rRoster = document.getElementById('boardRedRoster');
+      const hRoster = document.getElementById('hostRosterList');
+      gRoster.innerHTML = '';
+      rRoster.innerHTML = '';
+      hRoster.innerHTML = '';
+
       const playersArr = Object.values(gameState.players || {});
-      const greenPlayers = playersArr.filter(p => p.team === 'green');
-      const redPlayers = playersArr.filter(p => p.team === 'red');
-
-      document.getElementById('boardGreenPlayersList').innerHTML = greenPlayers.length
-        ? greenPlayers.map(p => `<span class="px-2.5 py-0.5 rounded-full bg-emerald-600/80 text-white font-bold">${p.name}</span>`).join('')
-        : '<span class="text-slate-400">لا يوجد لاعبون بعد</span>';
-
-      document.getElementById('boardRedPlayersList').innerHTML = redPlayers.length
-        ? redPlayers.map(p => `<span class="px-2.5 py-0.5 rounded-full bg-red-600/80 text-white font-bold">${p.name}</span>`).join('')
-        : '<span class="text-slate-400">لا يوجد لاعبون بعد</span>';
-
-      document.getElementById('hostPlayersCount').textContent = playersArr.length;
-      document.getElementById('hostPlayersGrid').innerHTML = playersArr.length
-        ? playersArr.map(p => {
-            const dot = p.team === 'green' ? '🟢' : '🔴';
-            return `<span class="px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-700 font-bold text-slate-200">${dot} ${p.name}</span>`;
-          }).join('')
-        : '<span class="text-slate-500">لا يوجد متسابقون مسجلون</span>';
-
-      // تحديث زر الجرس على جوال اللاعب
-      const buzzerBtn = document.getElementById('playerBigBuzzerBtn');
-      const buzzerTitle = document.getElementById('buzzerBtnTitle');
-      const feedbackBox = document.getElementById('playerBuzzFeedback');
-
-      if (buzzerBtn && playerSession.joined) {
-        const myRankIndex = gameState.buzzQueue.findIndex(b => b.playerId === playerSession.id);
-        if (myRankIndex === 0) {
-          buzzerBtn.disabled = true;
-          buzzerBtn.classList.add('locked-orb');
-          buzzerTitle.textContent = 'أنت الأسرع!';
-          feedbackBox.innerHTML = `
-            <span class="text-sm font-black text-emerald-400">🏆 ضغطتك هي الأسرع! استعد للإجابة</span>
-            <span class="text-xs text-slate-300 mt-0.5">بانتظار قرار المقدم</span>
-          `;
-        } else if (myRankIndex > 0) {
-          const diff = ((gameState.buzzQueue[myRankIndex].exactMs - gameState.buzzQueue[0].exactMs) / 1000).toFixed(3);
-          buzzerBtn.disabled = true;
-          buzzerBtn.classList.add('locked-orb');
-          buzzerTitle.textContent = `المركز #${myRankIndex + 1}`;
-          feedbackBox.innerHTML = `
-            <span class="text-sm font-black text-amber-300">تم تسجيل ضغطتك (المركز #${myRankIndex + 1})</span>
-            <span class="text-xs text-slate-400 mt-0.5">الفارق عن الأسرع: +${diff} ثانية</span>
-          `;
-        } else if (gameState.buzzQueue.length > 0 || gameState.buzzerLocked) {
-          buzzerBtn.disabled = true;
-          buzzerBtn.classList.add('locked-orb');
-          buzzerTitle.textContent = 'مغلق';
-          const firstName = gameState.buzzQueue[0]?.name || 'متسابق آخر';
-          feedbackBox.innerHTML = `
-            <span class="text-sm font-black text-red-400">سبقك (${firstName}) بالضغط على الجرس</span>
-            <span class="text-xs text-slate-400 mt-0.5">انتظر فتح الجرس للسؤال التالي</span>
-          `;
-        } else {
-          buzzerBtn.disabled = false;
-          buzzerBtn.classList.remove('locked-orb');
-          buzzerTitle.textContent = 'اضغط الآن!';
-          feedbackBox.innerHTML = `
-            <span class="text-sm font-extrabold text-amber-300">الجرس جاهز.. كن الأسرع!</span>
-            <span class="text-xs text-slate-400 mt-0.5">يتم احتساب السرعة بدقة أجزاء الثانية</span>
-          `;
-        }
-      }
-
-      // تحديث سؤال المقدم
-      const noCellBox = document.getElementById('hostNoCellSelected');
-      const activeBox = document.getElementById('hostActiveQuestionBox');
-      const qListEl = document.getElementById('hostAllLetterQuestionsList');
-
-      if (gameState.activeCell && gameState.board[gameState.activeCell.r]?.[gameState.activeCell.c]) {
-        noCellBox.classList.add('hidden');
-        activeBox.classList.remove('hidden');
-
-        const cell = gameState.board[gameState.activeCell.r][gameState.activeCell.c];
-        document.getElementById('hostActiveLetter').textContent = cell.letter;
-
-        const contestBadge = document.getElementById('hostContestingLabel');
-        if (gameState.contestingTeam === 'green') {
-          contestBadge.textContent = `فرصة ${gameState.greenName}`;
-          contestBadge.className = 'px-2.5 py-1 rounded-lg text-xs font-black bg-emerald-600/30 text-emerald-300 border border-emerald-500/40';
-        } else {
-          contestBadge.textContent = `فرصة ${gameState.redName}`;
-          contestBadge.className = 'px-2.5 py-1 rounded-lg text-xs font-black bg-red-600/30 text-red-300 border border-red-500/40';
-        }
-
-        const questions = QUESTION_BANK[cell.letter] || [{ q: `اذكر كلمة بحرف (${cell.letter})`, a: `حرف ${cell.letter}`, c: 'عامة' }];
-        const activeIdx = gameState.currentQuestionIndex % questions.length;
-        const currentQ = questions[activeIdx];
-
-        document.getElementById('hostCategoryLabel').textContent = `التصنيف: ${currentQ.c || 'عامة'}`;
-        document.getElementById('hostQuestionText').textContent = currentQ.q;
-        document.getElementById('hostAnswerText').textContent = currentQ.a;
-        document.getElementById('hostLetterQCount').textContent = questions.length;
-
-        qListEl.innerHTML = questions.map((item, idx) => `
-          <div onclick="selectSpecificQuestion(${idx})"
-            class="p-2.5 rounded-xl border cursor-pointer transition ${idx === activeIdx ? 'bg-amber-400/15 border-amber-400' : 'bg-slate-900/80 border-slate-800 hover:bg-slate-800'}">
-            <div class="font-bold text-white">${idx + 1}. ${item.q}</div>
-            <div class="text-emerald-400 font-black mt-0.5">الإجابة: ${item.a}</div>
-          </div>
-        `).join('');
+      if (!playersArr.length) {
+        hRoster.innerHTML = '<div class="muted">لا يوجد متسابقون مسجلون بعد</div>';
       } else {
-        noCellBox.classList.remove('hidden');
-        activeBox.classList.add('hidden');
-        document.getElementById('hostLetterQCount').textContent = '0';
-        qListEl.innerHTML = '<p class="text-slate-500">اختر حرفاً من اللوحة لعرض جميع الأسئلة والأجوبة المتوفرة له...</p>';
+        playersArr.forEach((p) => {
+          const chip = `<span class="chip ${p.team === 'green' ? 'g' : 'r'}">${escapeHtml(p.name)}</span>`;
+          if (p.team === 'green') gRoster.innerHTML += chip;
+          else rRoster.innerHTML += chip;
+          hRoster.innerHTML += `<div>${p.team === 'green' ? '🟢' : '🔴'} <strong>${escapeHtml(p.name)}</strong></div>`;
+        });
       }
 
-      updateTimerDisplays();
-    }
-
-    function switchTurnManually() {
-      gameState.currentTurn = gameState.currentTurn === 'green' ? 'red' : 'green';
-      if (gameState.activeCell) gameState.contestingTeam = gameState.currentTurn;
-      pushStateUpdate('select');
-    }
-
-    function adjustScore(team, delta) {
-      if (team === 'green') gameState.greenScore = Math.max(0, gameState.greenScore + delta);
-      else gameState.redScore = Math.max(0, gameState.redScore + delta);
-      pushStateUpdate(null);
-    }
-
-    function saveSettings() {
-      const g = document.getElementById('inputGreenName').value.trim();
-      const r = document.getElementById('inputRedName').value.trim();
-      const dur = parseInt(document.getElementById('inputTimerDuration').value, 10);
-
-      if (g) gameState.greenName = g;
-      if (r) gameState.redName = r;
-      if (!isNaN(dur)) {
-        gameState.timerDuration = dur;
-        if (!gameState.activeCell) gameState.timeLeft = dur;
+      const btn = document.getElementById('buzzerTrigger');
+      const status = document.getElementById('pStatusBox');
+      if (btn && status && PlayerApp.name) {
+        btn.classList.remove('pressed-me', 'locked-other');
+        if (gameState.buzzQueue.length > 0) {
+          const leader = gameState.buzzQueue[0];
+          if (leader.pid === PlayerApp.pid) {
+            btn.classList.add('pressed-me');
+            status.textContent = '🎉 أنت الأسرع! اضغطت على الجرس أولاً';
+          } else {
+            btn.classList.add('locked-other');
+            status.textContent = `سبقك (${leader.name}) على الجرس — انتظر فتح الجرس`;
+          }
+        } else {
+          status.textContent = '🔔 الجرس مفتوح وجاهز للضغط!';
+        }
       }
-
-      closeModal('settingsModal');
-      pushStateUpdate(null);
-      showToast('✓ تم حفظ الإعدادات');
     }
 
-    function resetAllScores() {
-      gameState.greenScore = 0;
-      gameState.redScore = 0;
-      closeModal('settingsModal');
-      pushStateUpdate(null);
-      showToast('تم تصفير النقاط');
-    }
+    function paintBoard(targetId) {
+      const wrap = document.getElementById(targetId);
+      if (!wrap) return;
+      wrap.innerHTML = '';
 
-    function addCustomQuestion() {
-      const letter = document.getElementById('customLetterSelect').value;
-      const q = document.getElementById('customQuestionInput').value.trim();
-      const a = document.getElementById('customAnswerInput').value.trim();
-      if (!q || !a) {
-        showToast('⚠️ يرجى كتابة السؤال والإجابة');
-        return;
+      for (let r = 0; r < 5; r++) {
+        const row = document.createElement('div');
+        row.className = 'hex-row' + (r % 2 === 1 ? ' shifted' : '');
+
+        for (let c = 0; c < 5; c++) {
+          const idx = r * 5 + c;
+          const cell = gameState.cells[idx];
+          if (!cell) continue;
+
+          const tile = document.createElement('div');
+          tile.className = 'hex-tile';
+          if (cell.owner) tile.classList.add(cell.owner);
+          if (gameState.selectedIdx === idx) tile.classList.add('active');
+          tile.textContent = cell.letter;
+          tile.onclick = () => GameEngine.clickCell(idx);
+          row.appendChild(tile);
+        }
+        wrap.appendChild(row);
       }
-
-      if (!QUESTION_BANK[letter]) QUESTION_BANK[letter] = [];
-      QUESTION_BANK[letter].unshift({ q, a, c: 'مخصص' });
-      document.getElementById('customQuestionInput').value = '';
-      document.getElementById('customAnswerInput').value = '';
-      closeModal('customQuestionModal');
-      updateBankBadges();
-      syncAllUIs();
-      showToast(`✓ تمت إضافة السؤال لحرف (${letter})`);
     }
 
-    function updateBankBadges() {
-      const total = getTotalQuestionsCount();
-      const statsEl = document.getElementById('questionBankStats');
-      const hostBadge = document.getElementById('hostQuestionCountBadge');
-      if (statsEl) statsEl.textContent = `📚 بنك الأسئلة: ${total.toLocaleString('ar-EG')} سؤال في 28 حرفاً`;
-      if (hostBadge) hostBadge.textContent = `${total.toLocaleString('ar-EG')} سؤال`;
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, (m) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[m]));
     }
 
-    function openModal(id) {
-      const el = document.getElementById(id);
-      el.classList.remove('hidden');
-      el.classList.add('flex');
+    function randomizeRoom() {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let code = '';
+      for (let i = 0; i < 5; i++) code += chars[Math.floor(Math.random() * chars.length)];
+      document.getElementById('setupRoomInput').value = code;
     }
 
-    function closeModal(id) {
-      const el = document.getElementById(id);
-      el.classList.add('hidden');
-      el.classList.remove('flex');
+    function enterMode(mode, explicitRoom = null) {
+      SoundEngine.ensure();
+      const chosen = (explicitRoom || document.getElementById('setupRoomInput').value || 'YAM26').trim();
+      initChannel(chosen);
+      loadRoomState();
+      currentView = mode;
+
+      try {
+        const base = window.location.href.split('?')[0];
+        window.history.replaceState({}, '', `${base}?mode=${mode}&room=${activeRoom}`);
+      } catch (_) {}
+
+      document.querySelectorAll('.screen').forEach((s) => s.classList.remove('active'));
+      if (mode === 'board') {
+        document.getElementById('boardScreen').classList.add('active');
+        document.getElementById('boardRoomText').textContent = activeRoom;
+      } else if (mode === 'host') {
+        document.getElementById('hostScreen').classList.add('active');
+        document.getElementById('hostRoomText').textContent = activeRoom;
+      } else if (mode === 'player') {
+        document.getElementById('playerScreen').classList.add('active');
+        document.getElementById('playerRoomText').textContent = activeRoom;
+      }
+      renderUI();
     }
 
-    let toastTimer = null;
-    function showToast(msg) {
-      const toast = document.getElementById('toastNotification');
-      toast.textContent = msg;
-      toast.classList.remove('hidden');
-      clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => toast.classList.add('hidden'), 3000);
+    function goHome() {
+      currentView = 'setup';
+      document.getElementById('setupRoomInput').value = activeRoom;
+      document.querySelectorAll('.screen').forEach((s) => s.classList.remove('active'));
+      document.getElementById('setupScreen').classList.add('active');
+    }
+
+    function buildPlayerUrl() {
+      const inputRoom = (document.getElementById('setupRoomInput')?.value || activeRoom || 'YAM26').toUpperCase().trim() || 'YAM26';
+      const base = window.location.href.split('?')[0];
+      return `${base}?mode=player&room=${encodeURIComponent(inputRoom)}`;
+    }
+
+    function openQRModal() {
+      const code = (document.getElementById('setupRoomInput')?.value || activeRoom || 'YAM26').toUpperCase().trim() || 'YAM26';
+      initChannel(code);
+      const url = buildPlayerUrl();
+      document.getElementById('qrRoomCode').textContent = code;
+      document.getElementById('qrLinkField').value = url;
+      document.getElementById('qrModal').classList.remove('hidden');
+      const canvas = document.getElementById('qrCanvas');
+      FastQR.draw(canvas, url);
+    }
+
+    function closeQRModal() {
+      document.getElementById('qrModal').classList.add('hidden');
+    }
+
+    function copyQRLink() {
+      const url = document.getElementById('qrLinkField').value;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).catch(() => {});
+      }
+      alert('تم نسخ الرابط: ' + url);
+    }
+
+    function openPlayerInTab() {
+      window.open(buildPlayerUrl(), '_blank');
+    }
+
+    function launchBoardPopup() {
+      const base = window.location.href.split('?')[0];
+      window.open(`${base}?mode=board&room=${encodeURIComponent(activeRoom)}`, '_blank');
+    }
+
+    function openHostAndBoard() {
+      const code = (document.getElementById('setupRoomInput').value || 'YAM26').toUpperCase().trim();
+      const base = window.location.href.split('?')[0];
+      window.open(`${base}?mode=board&room=${encodeURIComponent(code)}`, '_blank');
+      enterMode('host', code);
+    }
+
+    function openWinModal(team) {
+      document.getElementById('winHeading').textContent =
+        team === 'green' ? '🏆 مبروك للفريق الأخضر!' : '🏆 مبروك للفريق الأحمر!';
+      document.getElementById('winDesc').textContent =
+        team === 'green' ? 'اكتمل المسار الأخضر من الأعلى إلى الأسفل' : 'اكتمل المسار الأحمر من اليمين إلى اليسار';
+      document.getElementById('winModal').classList.remove('hidden');
+    }
+
+    function closeWinModal() {
+      document.getElementById('winModal').classList.add('hidden');
+      GameEngine.newBoard();
     }
 
     window.addEventListener('DOMContentLoaded', () => {
-      const select = document.getElementById('customLetterSelect');
-      ARABIC_ALPHABET.forEach(l => {
-        const opt = document.createElement('option');
-        opt.value = l;
-        opt.textContent = `حرف (${l})`;
-        select.appendChild(opt);
-      });
-
-      updateBankBadges();
-
       const params = new URLSearchParams(window.location.search);
-      const urlRoom = params.get('room');
-      const urlMode = params.get('mode');
-
-      if (urlRoom) {
-        gameState.roomCode = urlRoom.toUpperCase();
-        document.getElementById('roomCodeInput').value = gameState.roomCode;
+      const m = params.get('mode');
+      const r = params.get('room');
+      if (r) {
+        document.getElementById('setupRoomInput').value = r.toUpperCase();
+        initChannel(r);
+      } else {
+        initChannel(document.getElementById('setupRoomInput').value);
       }
-
-      setupRoomSync(gameState.roomCode);
-      startNewBoard(false);
-
-      if (urlMode === 'board' || urlMode === 'host' || urlMode === 'player') {
-        enterMode(urlMode);
+      if (m === 'board' || m === 'host' || m === 'player') {
+        enterMode(m, r || document.getElementById('setupRoomInput').value);
       }
     });
   </script>
