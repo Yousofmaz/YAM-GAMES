@@ -793,6 +793,151 @@
   <div id="toastNotification" class="fixed bottom-4 left-1/2 -translate-x-1/2 bg-slate-900 text-amber-200 border border-amber-400/80 px-4 py-2.5 rounded-2xl shadow-2xl text-xs sm:text-sm font-bold z-[110] hidden">
   </div>
 
+  <!-- =====================================================================
+       ربط Firebase Realtime Database للمزامنة اللحظية بين الأجهزة المختلفة
+       ===================================================================== -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import {
+      getDatabase,
+      ref,
+      set,
+      onValue,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+    // إعداد مشروع Firebase الخاص باللعبة (horoof-3d7ce)
+    const firebaseConfig = {
+      apiKey: "HOROOF_WEB_API_KEY_PLACEHOLDER",
+      authDomain: "horoof-3d7ce.firebaseapp.com",
+      databaseURL: "https://horoof-3d7ce-default-rtdb.firebaseio.com",
+      projectId: "horoof-3d7ce",
+      storageBucket: "horoof-3d7ce.appspot.com",
+      messagingSenderId: "HOROOF_SENDER_ID_PLACEHOLDER",
+      appId: "HOROOF_WEB_APP_ID_PLACEHOLDER"
+    };
+
+    let rtdb = null;
+    let activeRoomUnsub = null;
+    let cloudConnected = false;
+
+    try {
+      const app = initializeApp(firebaseConfig);
+      rtdb = getDatabase(app);
+      cloudConnected = true;
+    } catch (err) {
+      cloudConnected = false;
+    }
+
+    function normalizeRoom(roomCode) {
+      return (roomCode || window.gameState?.roomCode || "2026").toString().trim().toUpperCase() || "2026";
+    }
+
+    // إرسال حالة الغرفة بالكامل إلى Firebase Realtime Database
+    window.cloudPushRoomState = function(roomCode, payloadObj, soundEvent = null) {
+      const cleanRoom = normalizeRoom(roomCode);
+      if (!cloudConnected || !rtdb) return Promise.resolve(false);
+
+      const cloudDoc = {
+        ...payloadObj,
+        soundEvent: soundEvent || null,
+        updatedAt: serverTimestamp()
+      };
+
+      return set(ref(rtdb, `rooms/${cleanRoom}/state`), cloudDoc).catch(() => false);
+    };
+
+    // تسجيل لاعب جديد في الغرفة عبر السحابة
+    window.cloudRegisterPlayer = function(roomCode, playerObj) {
+      const cleanRoom = normalizeRoom(roomCode);
+      if (!cloudConnected || !rtdb || !playerObj || !playerObj.id) return Promise.resolve(false);
+
+      return set(ref(rtdb, `rooms/${cleanRoom}/players/${playerObj.id}`), {
+        ...playerObj,
+        joinedAtServer: serverTimestamp()
+      }).catch(() => false);
+    };
+
+    // تسجيل ضغطة الجرس مع serverTimestamp() لضبط العدالة بين الأجهزة
+    window.cloudPushBuzzPress = function(roomCode, buzzEntry) {
+      const cleanRoom = normalizeRoom(roomCode);
+      if (!cloudConnected || !rtdb || !buzzEntry || !buzzEntry.playerId) return Promise.resolve(false);
+
+      return set(ref(rtdb, `rooms/${cleanRoom}/buzzQueue/${buzzEntry.playerId}`), {
+        ...buzzEntry,
+        buzzedAtServer: serverTimestamp()
+      }).catch(() => false);
+    };
+
+    // مسح طابور الجرس وفتح الجرس لجميع الأجهزة في السحابة
+    window.cloudClearBuzzQueue = function(roomCode) {
+      const cleanRoom = normalizeRoom(roomCode);
+      if (!cloudConnected || !rtdb) return Promise.resolve(false);
+
+      return set(ref(rtdb, `rooms/${cleanRoom}/buzzQueue`), null).catch(() => false);
+    };
+
+    // الاستماع اللحظي لتغييرات الغرفة (الحالة، اللاعبين، والجرس) عبر كل الأجهزة
+    window.cloudSubscribeRoom = function(roomCode) {
+      const cleanRoom = normalizeRoom(roomCode);
+      if (typeof activeRoomUnsub === "function") {
+        activeRoomUnsub();
+        activeRoomUnsub = null;
+      }
+
+      if (!cloudConnected || !rtdb) return;
+
+      const roomRef = ref(rtdb, `rooms/${cleanRoom}`);
+      activeRoomUnsub = onValue(
+        roomRef,
+        (snapshot) => {
+          if (!snapshot.exists()) return;
+          const val = snapshot.val() || {};
+          const incomingState = val.state ? { ...val.state } : {};
+
+          // دمج اللاعبين من مسار الغرفة السحابي
+          if (val.players && typeof val.players === "object") {
+            incomingState.players = {
+              ...(incomingState.players || {}),
+              ...val.players
+            };
+          }
+
+          // دمج ضغطات الجرس وترتيبها بدقة باستخدام serverTimestamp ثم exactMs
+          if (val.buzzQueue && typeof val.buzzQueue === "object") {
+            const list = Object.values(val.buzzQueue).map(item => ({
+              ...item,
+              effectiveMs: typeof item.buzzedAtServer === "number" ? item.buzzedAtServer : (item.exactMs || Date.now())
+            }));
+            list.sort((a, b) => {
+              if (a.effectiveMs !== b.effectiveMs) return a.effectiveMs - b.effectiveMs;
+              return (a.exactMs || 0) - (b.exactMs || 0);
+            });
+            incomingState.buzzQueue = list;
+            if (list.length > 0) {
+              incomingState.buzzerLocked = true;
+            }
+          } else if (val.state && Array.isArray(val.state.buzzQueue)) {
+            incomingState.buzzQueue = val.state.buzzQueue;
+          } else {
+            incomingState.buzzQueue = [];
+          }
+
+          if (typeof window.handleCloudRoomSnapshot === "function") {
+            window.handleCloudRoomSnapshot(incomingState, val.state?.soundEvent || null);
+          }
+        },
+        () => {
+          // في حال عدم توفر صلاحيات القراءة أو انقطاع الشبكة يستمر العمل المحلي بسلاسة
+        }
+      );
+    };
+
+    if (typeof window.onCloudBridgeReady === "function") {
+      window.onCloudBridgeReady();
+    }
+  </script>
+
   <script>
     /**
      * =========================================================================
@@ -1233,9 +1378,11 @@
       timerPaused: false,
       currentQuestionIndex: 0,
       buzzerLocked: false,
-      buzzQueue: [], // { playerId, name, team, exactMs }
+      buzzQueue: [], // { playerId, name, team, exactMs, buzzedAtServer? }
       players: {}    // { playerId: { id, name, team } }
     };
+
+    window.gameState = gameState;
 
     let playerSession = {
       id: 'pl_' + Math.random().toString(36).slice(2, 10),
@@ -1245,6 +1392,7 @@
     };
 
     let timerInterval = null;
+    let lastProcessedSoundStamp = 0;
 
     function getRoomStorageKey(room = gameState.roomCode) {
       return `horoof_luxury_room_${room.toUpperCase()}`;
@@ -1264,6 +1412,58 @@
         return null;
       }
     }
+
+    // استقبال التحديثات الفورية القادمة من Firebase Realtime Database عبر الأجهزة المختلفة
+    window.handleCloudRoomSnapshot = function(incoming, soundEvent = null) {
+      if (!incoming) return;
+
+      const prevBuzzCount = gameState.buzzQueue.length;
+      const incomingRev = incoming.revision || 0;
+
+      // الحفاظ على اللوحة إذا كانت موجودة في الحالة القادمة أو الحالية
+      if (incoming.board && Array.isArray(incoming.board) && incoming.board.length === ROWS) {
+        if (incomingRev >= lastRevision || !gameState.board.length) {
+          applyIncomingState(incoming, soundEvent, true);
+          return;
+        }
+      }
+
+      // تحديث اللاعبين وطابور الجرس حتى لو لم تتغير اللوحة بعد
+      let changed = false;
+      if (incoming.players && JSON.stringify(incoming.players) !== JSON.stringify(gameState.players)) {
+        gameState.players = {
+          ...(gameState.players || {}),
+          ...incoming.players
+        };
+        changed = true;
+      }
+
+      if (Array.isArray(incoming.buzzQueue) && JSON.stringify(incoming.buzzQueue) !== JSON.stringify(gameState.buzzQueue)) {
+        gameState.buzzQueue = incoming.buzzQueue;
+        if (gameState.buzzQueue.length > 0) {
+          gameState.buzzerLocked = true;
+          gameState.timerPaused = true;
+        }
+        changed = true;
+      }
+
+      if (typeof incoming.buzzerLocked === 'boolean' && incoming.buzzerLocked !== gameState.buzzerLocked) {
+        gameState.buzzerLocked = incoming.buzzerLocked;
+        changed = true;
+      }
+
+      if (changed) {
+        saveLocalRoomSnapshot(buildSyncPayload());
+        if (gameState.buzzQueue.length > prevBuzzCount && gameState.viewMode !== 'player') {
+          const now = Date.now();
+          if (now - lastProcessedSoundStamp > 350) {
+            lastProcessedSoundStamp = now;
+            SFX.buzz();
+          }
+        }
+        syncAllUIs();
+      }
+    };
 
     function setupRoomSync(roomCode) {
       gameState.roomCode = roomCode.toUpperCase();
@@ -1287,6 +1487,11 @@
         applyIncomingState(existing, null, true);
       }
 
+      // تفعيل الاشتراك السحابي اللحظي في Firebase للغرفة المحددة
+      if (typeof window.cloudSubscribeRoom === 'function') {
+        window.cloudSubscribeRoom(gameState.roomCode);
+      }
+
       // مزامنة سريعة احتياطية لضمان ظهور اللاعبين والجرس فوراً عبر النوافذ
       if (window.__horoofSyncPoll) {
         clearInterval(window.__horoofSyncPoll);
@@ -1302,6 +1507,12 @@
         }
       }, 250);
     }
+
+    window.onCloudBridgeReady = function() {
+      if (gameState.roomCode && typeof window.cloudSubscribeRoom === 'function') {
+        window.cloudSubscribeRoom(gameState.roomCode);
+      }
+    };
 
     function buildSyncPayload() {
       return {
@@ -1341,6 +1552,9 @@
           soundEvent
         });
       }
+      if (typeof window.cloudPushRoomState === 'function') {
+        window.cloudPushRoomState(gameState.roomCode, payload, soundEvent);
+      }
       syncAllUIs();
     }
 
@@ -1369,12 +1583,23 @@
       gameState.currentQuestionIndex = incoming.currentQuestionIndex ?? 0;
       gameState.buzzerLocked = !!incoming.buzzerLocked;
       gameState.buzzQueue = incoming.buzzQueue || [];
-      gameState.players = incoming.players || {};
+      gameState.players = {
+        ...(gameState.players || {}),
+        ...(incoming.players || {})
+      };
 
       if (soundEvent && SFX[soundEvent]) {
-        SFX[soundEvent]();
+        const now = Date.now();
+        if (now - lastProcessedSoundStamp > 250) {
+          lastProcessedSoundStamp = now;
+          SFX[soundEvent]();
+        }
       } else if (gameState.buzzQueue.length > prevBuzzCount && gameState.viewMode !== 'player') {
-        SFX.buzz();
+        const now = Date.now();
+        if (now - lastProcessedSoundStamp > 250) {
+          lastProcessedSoundStamp = now;
+          SFX.buzz();
+        }
       }
 
       if (soundEvent === 'win' && gameState.winningCells.length > 0) {
@@ -1398,7 +1623,7 @@
 
     /**
      * =========================================================================
-     * إدارة تسجيل اللاعبين وضغط الجرس بدقة أجزاء الثانية
+     * إدارة تسجيل اللاعبين وضغط الجرس بدقة أجزاء الثانية وتوقيت الخادم
      * =========================================================================
      */
     function selectPlayerTeam(team) {
@@ -1431,14 +1656,16 @@
       const latest = loadLocalRoomSnapshot(gameState.roomCode);
       if (latest) applyIncomingState(latest, null, true);
 
+      const playerObj = {
+        id: playerSession.id,
+        name: playerSession.name,
+        team: playerSession.team,
+        joinedAt: Date.now()
+      };
+
       gameState.players = {
         ...(gameState.players || {}),
-        [playerSession.id]: {
-          id: playerSession.id,
-          name: playerSession.name,
-          team: playerSession.team,
-          joinedAt: Date.now()
-        }
+        [playerSession.id]: playerObj
       };
 
       document.getElementById('playerJoinCard').classList.add('hidden');
@@ -1458,8 +1685,12 @@
         broadcastChan.postMessage({
           type: 'PLAYER_JOIN',
           senderId: instanceId,
-          player: gameState.players[playerSession.id]
+          player: playerObj
         });
+      }
+
+      if (typeof window.cloudRegisterPlayer === 'function') {
+        window.cloudRegisterPlayer(gameState.roomCode, playerObj);
       }
 
       pushStateUpdate(null);
@@ -1482,6 +1713,12 @@
       document.getElementById('playerJoinCard').classList.remove('hidden');
     }
 
+    function getBuzzRankTimestamp(entry) {
+      if (typeof entry.buzzedAtServer === 'number') return entry.buzzedAtServer;
+      if (typeof entry.effectiveMs === 'number') return entry.effectiveMs;
+      return entry.exactMs || 0;
+    }
+
     function triggerPlayerBuzz() {
       if (!playerSession.joined) return;
       initAudio();
@@ -1491,8 +1728,11 @@
 
       const latest = loadLocalRoomSnapshot(gameState.roomCode);
       if (latest) {
-        gameState.buzzQueue = latest.buzzQueue || [];
-        gameState.players = latest.players || gameState.players;
+        gameState.buzzQueue = latest.buzzQueue || gameState.buzzQueue;
+        gameState.players = {
+          ...(gameState.players || {}),
+          ...(latest.players || {})
+        };
       }
 
       // منع تكرار الضغط لنفس اللاعب في نفس الجولة
@@ -1508,7 +1748,12 @@
       };
 
       gameState.buzzQueue.push(entry);
-      gameState.buzzQueue.sort((a, b) => a.exactMs - b.exactMs);
+      gameState.buzzQueue.sort((a, b) => {
+        const ta = getBuzzRankTimestamp(a);
+        const tb = getBuzzRankTimestamp(b);
+        if (ta !== tb) return ta - tb;
+        return (a.exactMs || 0) - (b.exactMs || 0);
+      });
       gameState.buzzerLocked = true;
       gameState.timerPaused = true;
 
@@ -1522,6 +1767,10 @@
         });
       }
 
+      if (typeof window.cloudPushBuzzPress === 'function') {
+        window.cloudPushBuzzPress(gameState.roomCode, entry);
+      }
+
       pushStateUpdate('buzz');
     }
 
@@ -1529,7 +1778,12 @@
       if (!entry || !entry.playerId) return;
       if (!gameState.buzzQueue.some(item => item.playerId === entry.playerId)) {
         gameState.buzzQueue.push(entry);
-        gameState.buzzQueue.sort((a, b) => a.exactMs - b.exactMs);
+        gameState.buzzQueue.sort((a, b) => {
+          const ta = getBuzzRankTimestamp(a);
+          const tb = getBuzzRankTimestamp(b);
+          if (ta !== tb) return ta - tb;
+          return (a.exactMs || 0) - (b.exactMs || 0);
+        });
       }
       gameState.buzzerLocked = true;
       gameState.timerPaused = true;
@@ -1544,6 +1798,9 @@
       gameState.buzzQueue = [];
       gameState.buzzerLocked = false;
       gameState.timerPaused = false;
+      if (typeof window.cloudClearBuzzQueue === 'function') {
+        window.cloudClearBuzzQueue(gameState.roomCode);
+      }
       if (shouldBroadcast) {
         pushStateUpdate('select');
       } else {
@@ -1815,6 +2072,10 @@
       gameState.buzzerLocked = false;
       gameState.timeLeft = gameState.timerDuration;
 
+      if (typeof window.cloudClearBuzzQueue === 'function') {
+        window.cloudClearBuzzQueue(gameState.roomCode);
+      }
+
       if (shouldBroadcast) {
         pushStateUpdate('shuffle');
       } else {
@@ -1912,6 +2173,10 @@
       gameState.buzzQueue = [];
       gameState.buzzerLocked = false;
 
+      if (typeof window.cloudClearBuzzQueue === 'function') {
+        window.cloudClearBuzzQueue(gameState.roomCode);
+      }
+
       const list = QUESTION_BANK[cell.letter] || [];
       gameState.currentQuestionIndex = list.length ? Math.floor(Math.random() * list.length) : 0;
 
@@ -1960,6 +2225,9 @@
       gameState.contestingTeam = gameState.contestingTeam === 'green' ? 'red' : 'green';
       gameState.buzzQueue = [];
       gameState.buzzerLocked = false;
+      if (typeof window.cloudClearBuzzQueue === 'function') {
+        window.cloudClearBuzzQueue(gameState.roomCode);
+      }
       resetTimer(true);
     }
 
@@ -1976,6 +2244,9 @@
       gameState.activeCell = null;
       gameState.buzzQueue = [];
       gameState.buzzerLocked = false;
+      if (typeof window.cloudClearBuzzQueue === 'function') {
+        window.cloudClearBuzzQueue(gameState.roomCode);
+      }
       gameState.currentTurn = gameState.currentTurn === 'green' ? 'red' : 'green';
       pushStateUpdate('pass');
     }
@@ -1989,6 +2260,9 @@
       gameState.activeCell = null;
       gameState.buzzQueue = [];
       gameState.buzzerLocked = false;
+      if (typeof window.cloudClearBuzzQueue === 'function') {
+        window.cloudClearBuzzQueue(gameState.roomCode);
+      }
       gameState.currentTurn = team;
 
       const winPath = checkWinCondition(team);
@@ -2234,9 +2508,10 @@
       if (gameState.buzzQueue.length === 0) {
         queueList.innerHTML = '<p class="text-slate-500 text-center py-4">لم يضغط أحد على الجرس بعد...</p>';
       } else {
-        const fastestMs = gameState.buzzQueue[0].exactMs;
+        const fastestStamp = getBuzzRankTimestamp(gameState.buzzQueue[0]);
         queueList.innerHTML = gameState.buzzQueue.map((item, idx) => {
-          const diffSeconds = ((item.exactMs - fastestMs) / 1000).toFixed(3);
+          const itemStamp = getBuzzRankTimestamp(item);
+          const diffSeconds = ((itemStamp - fastestStamp) / 1000).toFixed(3);
           const diffText = idx === 0 ? '⚡ الأسرع' : `+${diffSeconds} ث`;
           const colorCls = item.team === 'green' ? 'border-emerald-500 text-emerald-200' : 'border-red-500 text-red-200';
           return `
@@ -2277,15 +2552,15 @@
       if (buzzerBtn && playerSession.joined) {
         const myRankIndex = gameState.buzzQueue.findIndex(b => b.playerId === playerSession.id);
         if (myRankIndex === 0) {
-          buzzerBtn.disabled = true;
-          buzzerBtn.classList.add('locked-orb');
-          buzzerTitle.textContent = 'أنت الأسرع!';
+          buzzerBtn.title = 'أنت الأسرع!';
           feedbackBox.innerHTML = `
             <span class="text-sm font-black text-emerald-400">🏆 ضغطتك هي الأسرع! استعد للإجابة</span>
             <span class="text-xs text-slate-300 mt-0.5">بانتظار قرار المقدم</span>
           `;
         } else if (myRankIndex > 0) {
-          const diff = ((gameState.buzzQueue[myRankIndex].exactMs - gameState.buzzQueue[0].exactMs) / 1000).toFixed(3);
+          const fastestStamp = getBuzzRankTimestamp(gameState.buzzQueue[0]);
+          const myStamp = getBuzzRankTimestamp(gameState.buzzQueue[myRankIndex]);
+          const diff = ((myStamp - fastestStamp) / 1000).toFixed(3);
           buzzerBtn.disabled = true;
           buzzerBtn.classList.add('locked-orb');
           buzzerTitle.textContent = `المركز #${myRankIndex + 1}`;
@@ -2466,7 +2741,9 @@
       }
 
       setupRoomSync(gameState.roomCode);
-      startNewBoard(false);
+      if (!gameState.board.length) {
+        startNewBoard(false);
+      }
 
       if (urlMode === 'board' || urlMode === 'host' || urlMode === 'player') {
         enterMode(urlMode);
