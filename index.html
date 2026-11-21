@@ -32,6 +32,16 @@
         <button type="button" class="btn host-btn" onclick="launchMode('host')">🎙️ فتح لوحة المقدم</button>
         <button type="button" class="btn player-btn" onclick="launchMode('player')">🔔 فتح جرس اللاعب</button>
       </div>
+
+      <!-- مشغلات الأصوات الثلاثة مباشرة من رابط الانديكس -->
+      <div class="index-sounds-box">
+        <h4>🎵 المقاطع الصوتية الثلاثة (./sounds/)</h4>
+        <div class="index-sounds-buttons">
+          <button type="button" class="btn secondary-btn" onclick="AudioFX.playStartBoard()">🔊 صوت 1 (بدء لوحة)</button>
+          <button type="button" class="btn secondary-btn" onclick="AudioFX.playStartGame()">🔊 صوت 2 (بدء اللعبة)</button>
+          <button type="button" class="btn secondary-btn" onclick="AudioFX.playLetterClick()">🔊 صوت 3 (ضغط الحرف)</button>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -139,6 +149,9 @@
           </button>
           <button type="button" id="startGameSoundBtn" class="btn host-btn" onclick="GameController.playStartGameSound()">
             🔊 صوت بدء اللعبة
+          </button>
+          <button type="button" id="letterClickSoundBtn" class="btn secondary-btn" onclick="AudioFX.playLetterClick()">
+            🎵 صوت ضغط الحرف
           </button>
         </div>
 
