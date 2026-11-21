@@ -1,10 +1,72 @@
 // ==========================================
+// 0. إعداد المزامنة السحابية عبر Firebase
+// ==========================================
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCi7gomrbfG9KPYfD3DqPMO7ubJZXeE6wo",
+  authDomain: "horooff-ceb81.firebaseapp.com",
+  databaseURL: "https://horooff-ceb81-default-rtdb.firebaseio.com",
+  projectId: "horooff-ceb81",
+  storageBucket: "horooff-ceb81.firebasestorage.app",
+  messagingSenderId: "815516093583",
+  appId: "1:815516093583:web:8cbb3a42ccb0a32f7df4fa",
+  measurementId: "G-X8NLBCCJVT"
+};
+
+let dbRef = null;
+let serverOffsetMs = 0;
+let isCloudConnected = false;
+
+function initCloudSync() {
+  const badge = document.getElementById('syncStatusBadge');
+  try {
+    if (FIREBASE_CONFIG && FIREBASE_CONFIG.databaseURL && window.firebase) {
+      if (!firebase.apps.length) {
+        firebase.initializeApp(FIREBASE_CONFIG);
+      }
+      const rtdb = firebase.database();
+      isCloudConnected = true;
+
+      rtdb.ref('.info/serverTimeOffset').on('value', (snap) => {
+        serverOffsetMs = snap.val() || 0;
+      });
+
+      if (currentRoom) {
+        attachCloudListeners();
+      }
+
+      if (badge) {
+        badge.textContent = 'متصل بـ Firebase (الجرس والغرفة يعملان على جميع الأجهزة)';
+        badge.className = 'sync-badge online';
+      }
+    } else if (badge) {
+      badge.textContent = 'وضع الاختبار المحلي';
+      badge.className = 'sync-badge offline';
+    }
+  } catch (err) {
+    console.error('Firebase init error:', err);
+    if (badge) {
+      badge.textContent = 'تعذر الاتصال بـ Firebase - تحقق من قواعد قاعدة البيانات';
+      badge.className = 'sync-badge offline';
+    }
+  }
+}
+
+function getAccurateNow() {
+  return Date.now() + serverOffsetMs;
+}
+
+// ==========================================
 // 1. محرك المؤثرات الصوتية الأصلية (Web Audio API)
 // ==========================================
 const AudioFX = {
   ctx: null,
   init() {
-    if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (!this.ctx) {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
   },
   tone(freq, type, duration, delay = 0, vol = 0.25) {
     this.init();
@@ -29,8 +91,9 @@ const AudioFX = {
     this.tone(880, 'sine', 0.25, 0.1, 0.3);
   },
   playBuzz() {
-    this.tone(180, 'sawtooth', 0.45, 0, 0.4);
-    this.tone(240, 'square', 0.45, 0.05, 0.3);
+    this.tone(220, 'sawtooth', 0.35, 0, 0.45);
+    this.tone(330, 'square', 0.35, 0.04, 0.35);
+    this.tone(660, 'triangle', 0.25, 0.12, 0.35);
   },
   playCorrect() {
     [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => this.tone(f, 'triangle', 0.25, i * 0.09, 0.35));
@@ -49,40 +112,99 @@ const AudioFX = {
 // ==========================================
 let currentRoom = '';
 let currentMode = 'setup';
+let lastBuzzCount = 0;
+
+const IMAGE_COLUMNS_SPEC = [
+  { col: 0, count: 5 },
+  { col: 1, count: 5 },
+  { col: 2, count: 5 },
+  { col: 3, count: 5 },
+  { col: 4, count: 5 }
+];
+
+const TOTAL_LETTER_CELLS = 25;
+
 let state = {
-  cells: [], // 25 خلية: { letter, owner: null | 'green' | 'red' }
+  cells: [],
   activeIndex: null,
   questionIndex: 0,
   greenScore: 0,
   redScore: 0,
   timer: 15,
   buzzerLocked: false,
-  buzzQueue: [], // { id, name, team, ts }
-  players: {}    // { id: { name, team } }
+  buzzQueue: [],
+  players: {}
 };
 
 const STORAGE_KEY = () => `horoof_room_${currentRoom}`;
 
+function normalizeState(rawObj) {
+  const base = {
+    cells: [],
+    activeIndex: null,
+    questionIndex: 0,
+    greenScore: 0,
+    redScore: 0,
+    timer: 15,
+    buzzerLocked: false,
+    buzzQueue: [],
+    players: {}
+  };
+  const merged = { ...base, ...(rawObj || {}) };
+  merged.buzzQueue = Array.isArray(merged.buzzQueue) ? merged.buzzQueue : Object.values(merged.buzzQueue || {});
+  merged.buzzQueue.sort((a, b) => a.ts - b.ts);
+  merged.players = merged.players && typeof merged.players === 'object' ? merged.players : {};
+  merged.cells = Array.isArray(merged.cells) ? merged.cells : Object.values(merged.cells || {});
+  return merged;
+}
+
 function saveState() {
-  localStorage.setItem(STORAGE_KEY(), JSON.stringify(state));
+  state = normalizeState(state);
+  if (currentRoom) {
+    localStorage.setItem(STORAGE_KEY(), JSON.stringify(state));
+    if (isCloudConnected && dbRef) {
+      dbRef.set(state).catch((e) => console.error('Cloud save error:', e));
+    }
+  }
   renderAll();
 }
 
 function loadState() {
+  if (!currentRoom) return;
   const raw = localStorage.getItem(STORAGE_KEY());
   if (raw) {
-    state = JSON.parse(raw);
+    state = normalizeState(JSON.parse(raw));
   }
 }
 
-// الاستماع للتحديثات الفورية بين التبويبات/النوافذ
-window.addEventListener('storage', (e) => {
-  if (e.key === STORAGE_KEY() && e.newValue) {
-    const prevBuzzLen = state.buzzQueue.length;
-    state = JSON.parse(e.newValue);
-    if (state.buzzQueue.length > prevBuzzLen && currentMode !== 'player') {
+function attachCloudListeners() {
+  if (!isCloudConnected || !currentRoom) return;
+  dbRef = firebase.database().ref(`horoof_rooms/${currentRoom}`);
+  dbRef.off();
+  dbRef.on('value', (snapshot) => {
+    const cloudData = snapshot.val();
+    if (!cloudData) return;
+
+    const incoming = normalizeState(cloudData);
+    const newBuzzLen = incoming.buzzQueue.length;
+    if (newBuzzLen > lastBuzzCount && currentMode !== 'player') {
       AudioFX.playBuzz();
     }
+    lastBuzzCount = newBuzzLen;
+    state = incoming;
+    localStorage.setItem(STORAGE_KEY(), JSON.stringify(state));
+    renderAll();
+  });
+}
+
+window.addEventListener('storage', (e) => {
+  if (e.key === STORAGE_KEY() && e.newValue) {
+    const incoming = normalizeState(JSON.parse(e.newValue));
+    if (incoming.buzzQueue.length > lastBuzzCount && currentMode !== 'player') {
+      AudioFX.playBuzz();
+    }
+    lastBuzzCount = incoming.buzzQueue.length;
+    state = incoming;
     renderAll();
   }
 });
@@ -105,24 +227,30 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('genRoomBtn').click();
   }
 
+  initCloudSync();
+
   if (modeParam && roomParam) {
     launchMode(modeParam, roomParam.toUpperCase());
   }
 });
 
 function launchMode(mode, forcedRoom = null) {
+  AudioFX.init();
   currentRoom = (forcedRoom || document.getElementById('roomCodeInput').value || 'YAM1').toUpperCase();
   currentMode = mode;
 
-  // تحديث الرابط بدون إعادة تحميل
   const newUrl = `${window.location.pathname}?mode=${mode}&room=${currentRoom}`;
   window.history.replaceState({}, '', newUrl);
 
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
 
   loadState();
-  if (state.cells.length === 0) {
+  if (!state.cells || state.cells.length !== TOTAL_LETTER_CELLS) {
     GameController.initBoard(false);
+  }
+
+  if (isCloudConnected) {
+    attachCloudListeners();
   }
 
   if (mode === 'board') {
@@ -134,6 +262,8 @@ function launchMode(mode, forcedRoom = null) {
   } else if (mode === 'player') {
     document.getElementById('playerScreen').classList.add('active');
     document.getElementById('playerRoomLabel').textContent = currentRoom;
+    document.getElementById('playerJoinForm').classList.remove('hidden');
+    document.getElementById('playerBuzzerPad').classList.add('hidden');
   }
 
   renderAll();
@@ -146,11 +276,28 @@ const GameController = {
   timerInterval: null,
 
   initBoard(playSound = true) {
-    const shuffled = [...ARABIC_LETTERS].sort(() => Math.random() - 0.5).slice(0, 25);
-    state.cells = shuffled.map(letter => ({ letter, owner: null }));
+    const shuffled = [...ARABIC_LETTERS].sort(() => Math.random() - 0.5).slice(0, TOTAL_LETTER_CELLS);
+    const cells = [];
+    let poolIdx = 0;
+
+    IMAGE_COLUMNS_SPEC.forEach((colSpec) => {
+      for (let r = 0; r < colSpec.count; r++) {
+        const index = cells.length;
+        cells.push({
+          index,
+          col: colSpec.col,
+          row: r,
+          letter: shuffled[poolIdx++] || 'أ',
+          owner: null
+        });
+      }
+    });
+
+    state.cells = cells;
     state.activeIndex = null;
     state.buzzQueue = [];
     state.buzzerLocked = false;
+    lastBuzzCount = 0;
     if (playSound) AudioFX.playShuffle();
     saveState();
   },
@@ -162,16 +309,18 @@ const GameController = {
   },
 
   selectCell(index) {
+    if (!state.cells[index]) return;
     state.activeIndex = index;
     state.questionIndex = 0;
     state.buzzQueue = [];
     state.buzzerLocked = false;
+    lastBuzzCount = 0;
     AudioFX.playSelect();
     saveState();
   },
 
   nextQuestion() {
-    if (state.activeIndex === null) return;
+    if (state.activeIndex === null || !state.cells[state.activeIndex]) return;
     const letter = state.cells[state.activeIndex].letter;
     const list = QUESTIONS_DB[letter] || [];
     if (list.length > 0) {
@@ -181,11 +330,12 @@ const GameController = {
   },
 
   awardCell(team) {
-    if (state.activeIndex === null) return;
+    if (state.activeIndex === null || !state.cells[state.activeIndex]) return;
     state.cells[state.activeIndex].owner = team;
     state.activeIndex = null;
     state.buzzQueue = [];
     state.buzzerLocked = false;
+    lastBuzzCount = 0;
     this.stopTimer();
     AudioFX.playCorrect();
     saveState();
@@ -203,12 +353,13 @@ const GameController = {
   passTurn() {
     state.buzzQueue = [];
     state.buzzerLocked = false;
+    lastBuzzCount = 0;
     AudioFX.playWrong();
     saveState();
   },
 
   replaceLetter() {
-    if (state.activeIndex === null) return;
+    if (state.activeIndex === null || !state.cells[state.activeIndex]) return;
     const used = new Set(state.cells.map(c => c.letter));
     const available = ARABIC_LETTERS.filter(l => !used.has(l));
     if (available.length > 0) {
@@ -222,6 +373,7 @@ const GameController = {
   unlockBuzzer() {
     state.buzzQueue = [];
     state.buzzerLocked = false;
+    lastBuzzCount = 0;
     saveState();
   },
 
@@ -249,57 +401,63 @@ const GameController = {
     saveState();
   },
 
-  // خوارزمية البحث بالعرض (BFS) للتحقق من توصيل المسار
   checkWin(team) {
     const visited = new Set();
     const queue = [];
 
-    for (let i = 0; i < 25; i++) {
-      const r = Math.floor(i / 5);
-      const c = i % 5;
-      if (state.cells[i].owner === team) {
-        if ((team === 'green' && r === 0) || (team === 'red' && c === 0)) {
-          queue.push([i]);
-          visited.add(i);
-        }
+    for (const cell of state.cells) {
+      if (!cell || cell.owner !== team) continue;
+      const isStart = (team === 'green' && cell.row === 0) || (team === 'red' && cell.col === 0);
+      if (isStart) {
+        queue.push([cell.index]);
+        visited.add(cell.index);
       }
     }
 
     while (queue.length > 0) {
       const path = queue.shift();
-      const curr = path[path.length - 1];
-      const r = Math.floor(curr / 5);
-      const c = curr % 5;
+      const currIdx = path[path.length - 1];
+      const currCell = state.cells[currIdx];
 
-      if ((team === 'green' && r === 4) || (team === 'red' && c === 4)) {
+      const colSpec = IMAGE_COLUMNS_SPEC[currCell.col];
+      const isGoal =
+        (team === 'green' && currCell.row === colSpec.count - 1) ||
+        (team === 'red' && currCell.col === IMAGE_COLUMNS_SPEC.length - 1);
+
+      if (isGoal) {
         return path;
       }
 
-      for (const nxt of this.getNeighbors(r, c)) {
-        if (!visited.has(nxt) && state.cells[nxt].owner === team) {
-          visited.add(nxt);
-          queue.push([...path, nxt]);
+      for (const nxtIdx of this.getNeighbors(currIdx)) {
+        if (!visited.has(nxtIdx) && state.cells[nxtIdx] && state.cells[nxtIdx].owner === team) {
+          visited.add(nxtIdx);
+          queue.push([...path, nxtIdx]);
         }
       }
     }
     return null;
   },
 
-  getNeighbors(r, c) {
-    const evenOffsets = [[-1, 0], [-1, 1], [0, -1], [0, 1], [1, 0], [1, 1]];
-    const oddOffsets  = [[-1, -1], [-1, 0], [0, -1], [0, 1], [1, -1], [1, 0]];
-    const offsets = (r % 2 === 0) ? evenOffsets : oddOffsets;
-    const res = [];
-    for (const [dr, dc] of offsets) {
-      const nr = r + dr, nc = c + dc;
-      if (nr >= 0 && nr < 5 && nc >= 0 && nc < 5) res.push(nr * 5 + nc);
+  getNeighbors(cellIndex) {
+    const target = state.cells[cellIndex];
+    if (!target) return [];
+    const neighbors = [];
+
+    for (const candidate of state.cells) {
+      if (candidate.index === target.index) continue;
+      const colDiff = Math.abs(candidate.col - target.col);
+      if (colDiff === 0 && Math.abs(candidate.row - target.row) === 1) {
+        neighbors.push(candidate.index);
+      } else if (colDiff === 1 && Math.abs(candidate.row - target.row) <= 1) {
+        neighbors.push(candidate.index);
+      }
     }
-    return res;
+    return neighbors;
   }
 };
 
 // ==========================================
-// 5. جرس اللاعب بدقة أجزاء الثانية
+// 5. جرس اللاعب: إدخال الاسم واختيار الفريق والمزامنة الفورية
 // ==========================================
 const PlayerClient = {
   id: 'p_' + Math.random().toString(36).substr(2, 9),
@@ -307,13 +465,21 @@ const PlayerClient = {
   team: 'green',
 
   join() {
+    AudioFX.init();
     const nameInput = document.getElementById('playerNameInput').value.trim();
     if (!nameInput) return alert('الرجاء كتابة اسمك أولاً');
+
+    const selectedTeamEl = document.querySelector('input[name="playerTeam"]:checked');
     this.name = nameInput;
-    this.team = document.querySelector('input[name="playerTeam"]:checked').value;
+    this.team = selectedTeamEl ? selectedTeamEl.value : 'green';
 
     loadState();
-    state.players[this.id] = { name: this.name, team: this.team };
+    state.players[this.id] = {
+      id: this.id,
+      name: this.name,
+      team: this.team,
+      joinedAt: getAccurateNow()
+    };
     saveState();
 
     document.getElementById('playerJoinForm').classList.add('hidden');
@@ -323,11 +489,11 @@ const PlayerClient = {
   },
 
   buzz() {
+    AudioFX.init();
     loadState();
-    // تسجيل الطابع الزمني عالي الدقة بالميلي ثانية
-    const exactTimestamp = performance.timeOrigin + performance.now();
-
     if (state.buzzQueue.some(b => b.id === this.id)) return;
+
+    const exactTimestamp = getAccurateNow();
 
     state.buzzQueue.push({
       id: this.id,
@@ -336,7 +502,6 @@ const PlayerClient = {
       ts: exactTimestamp
     });
 
-    // ترتيب تلقائي حسب أسرع ضغطة بأجزاء الثانية
     state.buzzQueue.sort((a, b) => a.ts - b.ts);
     state.buzzerLocked = true;
 
@@ -349,7 +514,6 @@ const PlayerClient = {
 // 6. رسم الواجهات وتحديثها لحظياً
 // ==========================================
 function renderAll() {
-  // تحديث النقاط والمؤقت
   document.getElementById('boardGreenScore').textContent = state.greenScore;
   document.getElementById('boardRedScore').textContent = state.redScore;
   document.getElementById('boardTimer').textContent = state.timer;
@@ -358,17 +522,15 @@ function renderAll() {
   document.getElementById('hostRedScore').textContent = state.redScore;
   document.getElementById('hostTimer').textContent = state.timer;
 
-  // رسم اللوحة السداسية (شاشة العرض + شاشة المقدم)
-  renderHexGrid('hexGrid', false);
-  renderHexGrid('hostMiniGrid', true);
+  renderSvgHexBoard('hexGrid');
+  renderSvgHexBoard('hostMiniGrid');
 
-  // تحديث سؤال المقدم
-  if (state.activeIndex !== null && state.cells[state.activeIndex]) {
-    const letter = state.cells[state.activeIndex].letter;
-    const qList = QUESTIONS_DB[letter] || [{ q: 'سؤال حر من المقدم', a: '---' }];
+  const activeCell = state.activeIndex !== null ? state.cells[state.activeIndex] : null;
+  if (activeCell && activeCell.letter) {
+    const qList = QUESTIONS_DB[activeCell.letter] || [{ q: 'سؤال حر من المقدم', a: '---' }];
     const currentQ = qList[state.questionIndex % qList.length];
 
-    document.getElementById('hostSelectedLetter').textContent = letter;
+    document.getElementById('hostSelectedLetter').textContent = activeCell.letter;
     document.getElementById('hostQuestionText').textContent = currentQ.q;
     document.getElementById('hostAnswerText').textContent = currentQ.a;
   } else {
@@ -377,7 +539,6 @@ function renderAll() {
     document.getElementById('hostAnswerText').textContent = '---';
   }
 
-  // تحديث الجرس على شاشة اللوحة
   const banner = document.getElementById('boardBuzzBanner');
   if (state.buzzQueue.length > 0) {
     const first = state.buzzQueue[0];
@@ -389,7 +550,6 @@ function renderAll() {
     banner.classList.add('hidden');
   }
 
-  // تحديث قائمة ترتيب السرعة لدى المقدم
   const queueEl = document.getElementById('hostBuzzQueue');
   if (state.buzzQueue.length === 0) {
     queueEl.innerHTML = '<p class="muted">بانتظار ضغط اللاعبين على الجرس...</p>';
@@ -407,22 +567,39 @@ function renderAll() {
     }).join('');
   }
 
-  // تحديث قائمة اللاعبين المتصلين
   const greenList = document.getElementById('boardGreenPlayers');
   const redList = document.getElementById('boardRedPlayers');
   const hostPlayers = document.getElementById('hostPlayersList');
-  greenList.innerHTML = '';
-  redList.innerHTML = '';
-  hostPlayers.innerHTML = '';
 
-  Object.values(state.players).forEach(p => {
-    const chip = `<span class="player-chip">${p.name}</span>`;
-    if (p.team === 'green') greenList.innerHTML += chip;
-    else redList.innerHTML += chip;
-    hostPlayers.innerHTML += `<div>${p.team === 'green' ? '🟢' : '🔴'} ${p.name}</div>`;
-  });
+  const playersArr = Object.values(state.players || {});
+  const greenPlayers = playersArr.filter(p => p.team === 'green');
+  const redPlayers = playersArr.filter(p => p.team === 'red');
 
-  // تحديث حالة زر الجرس في جوال اللاعب
+  greenList.innerHTML = `<span class="strip-label">🟢 الأخضر (${greenPlayers.length}):</span>` +
+    (greenPlayers.length
+      ? greenPlayers.map(p => `<span class="player-chip">${p.name}</span>`).join('')
+      : '<span class="muted">لا يوجد لاعبون</span>');
+
+  redList.innerHTML = `<span class="strip-label">🔴 الأحمر (${redPlayers.length}):</span>` +
+    (redPlayers.length
+      ? redPlayers.map(p => `<span class="player-chip">${p.name}</span>`).join('')
+      : '<span class="muted">لا يوجد لاعبون</span>');
+
+  hostPlayers.innerHTML = `
+    <div class="host-team-box green-box">
+      <div class="host-team-title">🟢 الفريق الأخضر (${greenPlayers.length})</div>
+      ${greenPlayers.length
+        ? greenPlayers.map(p => `<div class="host-player-name">${p.name}</div>`).join('')
+        : '<div class="muted">بانتظار انضمام اللاعبين...</div>'}
+    </div>
+    <div class="host-team-box red-box">
+      <div class="host-team-title">🔴 الفريق الأحمر (${redPlayers.length})</div>
+      ${redPlayers.length
+        ? redPlayers.map(p => `<div class="host-player-name">${p.name}</div>`).join('')
+        : '<div class="muted">بانتظار انضمام اللاعبين...</div>'}
+    </div>
+  `;
+
   const bigBtn = document.getElementById('bigBuzzerBtn');
   const statusMsg = document.getElementById('playerStatusMsg');
   if (bigBtn) {
@@ -439,31 +616,151 @@ function renderAll() {
   }
 }
 
-function renderHexGrid(containerId, isHost) {
-  const container = document.getElementById(containerId);
-  if (!container) return;
-  container.innerHTML = '';
-
-  for (let r = 0; r < 5; r++) {
-    const rowDiv = document.createElement('div');
-    rowDiv.className = 'hex-row';
-
-    for (let c = 0; c < 5; c++) {
-      const idx = r * 5 + c;
-      const cell = state.cells[idx];
-      if (!cell) continue;
-
-      const cellDiv = document.createElement('div');
-      cellDiv.className = 'hex-cell';
-      if (cell.owner) cellDiv.classList.add(cell.owner);
-      if (state.activeIndex === idx) cellDiv.classList.add('active-cell');
-      cellDiv.textContent = cell.letter;
-
-      cellDiv.onclick = () => GameController.selectCell(idx);
-      rowDiv.appendChild(cellDiv);
-    }
-    container.appendChild(rowDiv);
+function hexPointsSvg(cx, cy, r) {
+  const pts = [];
+  for (let i = 0; i < 6; i++) {
+    const angle = (Math.PI / 180) * (60 * i);
+    const x = cx + r * Math.cos(angle);
+    const y = cy + r * Math.sin(angle);
+    pts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
   }
+  return pts.join(' ');
+}
+
+function renderSvgHexBoard(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container || !state.cells || state.cells.length === 0) return;
+
+  const R = 50;
+  const dx = 1.5 * R;
+  const dy = Math.sqrt(3) * R;
+  const centerX = 420;
+  const centerY = 360;
+
+  const columnsCount = 5;
+  const rowsCount = 5;
+  const allHexes = [];
+  const baseBottomY = centerY + ((rowsCount - 1) * dy) / 2 + dy;
+
+  for (let visualCol = 0; visualCol < columnsCount; visualCol++) {
+    const specCol = columnsCount - 1 - visualCol;
+    const cx = centerX + (2 - visualCol) * dx;
+    const stagger = (visualCol % 2 === 1) ? (dy * 0.5) : 0;
+    const startY = centerY - ((rowsCount - 1) * dy) / 2 + stagger;
+
+    // السطر الأخضر العلوي
+    allHexes.push({ type: 'border', color: '#077e36', cx, cy: startY - dy });
+
+    const colCells = state.cells
+      .filter(c => c.col === specCol)
+      .sort((a, b) => a.row - b.row)
+      .slice(0, rowsCount);
+
+    colCells.forEach((cell, rIdx) => {
+      allHexes.push({
+        type: 'letter',
+        cell,
+        cx,
+        cy: startY + rIdx * dy
+      });
+    });
+
+    // السطر الأخضر السفلي مقلوب رأسياً على عقب ليطابق الأعمدة من الأسفل
+    const flippedBottomY = baseBottomY - stagger;
+    allHexes.push({ type: 'border', color: '#077e36', cx, cy: flippedBottomY });
+  }
+
+  // حواف حمراء يسار ويمين ملاصقة تماماً للأعمدة المجاورة
+  const leftColX = centerX + 2 * dx;
+  const rightColX = centerX - 2 * dx;
+  const leftStagger = (0 % 2 === 1) ? (dy * 0.5) : 0;
+  const rightStagger = (4 % 2 === 1) ? (dy * 0.5) : 0;
+  const leftStartY = centerY - ((rowsCount - 1) * dy) / 2 + leftStagger;
+  const rightStartY = centerY - ((rowsCount - 1) * dy) / 2 + rightStagger;
+
+  allHexes.push({
+    type: 'border',
+    color: '#c41620',
+    cx: leftColX + dx,
+    cy: leftStartY - dy * 0.5
+  });
+
+  for (let r = 0; r < rowsCount; r++) {
+    allHexes.push({
+      type: 'border',
+      color: '#c41620',
+      cx: leftColX + dx,
+      cy: leftStartY + r * dy + dy * 0.5
+    });
+    allHexes.push({
+      type: 'border',
+      color: '#c41620',
+      cx: rightColX - dx,
+      cy: rightStartY + r * dy - dy * 0.5
+    });
+  }
+
+  allHexes.push({
+    type: 'border',
+    color: '#c41620',
+    cx: rightColX - dx,
+    cy: rightStartY + (rowsCount - 1) * dy + dy * 0.5
+  });
+
+  const svgNs = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(svgNs, 'svg');
+  svg.setAttribute('viewBox', '0 0 840 720');
+
+  const bgRect = document.createElementNS(svgNs, 'rect');
+  bgRect.setAttribute('x', '0');
+  bgRect.setAttribute('y', '0');
+  bgRect.setAttribute('width', '840');
+  bgRect.setAttribute('height', '720');
+  bgRect.setAttribute('fill', '#050505');
+  svg.appendChild(bgRect);
+
+  allHexes.forEach((item) => {
+    if (item.type === 'border') {
+      const poly = document.createElementNS(svgNs, 'polygon');
+      poly.setAttribute('points', hexPointsSvg(item.cx, item.cy, R));
+      poly.setAttribute('fill', item.color);
+      poly.setAttribute('class', 'hex-poly');
+      svg.appendChild(poly);
+      return;
+    }
+
+    const { cell, cx, cy } = item;
+    const g = document.createElementNS(svgNs, 'g');
+    let cls = 'hex-letter-cell';
+    if (cell.owner === 'green') cls += ' owned-green';
+    else if (cell.owner === 'red') cls += ' owned-red';
+    if (state.activeIndex === cell.index) cls += ' active-cell';
+    g.setAttribute('class', cls);
+
+    let fillColor = '#fffde3';
+    if (cell.owner === 'green') fillColor = '#16c75e';
+    else if (cell.owner === 'red') fillColor = '#ff3b47';
+    if (state.activeIndex === cell.index) fillColor = '#f5c542';
+
+    const poly = document.createElementNS(svgNs, 'polygon');
+    poly.setAttribute('points', hexPointsSvg(cx, cy, R));
+    poly.setAttribute('fill', fillColor);
+    poly.setAttribute('class', 'hex-poly');
+
+    const text = document.createElementNS(svgNs, 'text');
+    text.setAttribute('x', cx);
+    text.setAttribute('y', cy + 2);
+    text.setAttribute('class', 'hex-letter-text');
+    text.textContent = cell.letter;
+
+    g.appendChild(poly);
+    g.appendChild(text);
+    g.addEventListener('click', () => GameController.selectCell(cell.index));
+    svg.appendChild(g);
+  });
+
+  container.innerHTML = '';
+  container.appendChild(svg);
 }
 
 // ==========================================
