@@ -69,9 +69,9 @@ const AudioFX = {
     letterClick: null
   },
   defaultPaths: {
-    startBoard: 'sounds/start-board.mp3',
-    startGame: 'sounds/start-game.mp3',
-    letterClick: 'sounds/letter-click.mp3'
+    startBoard: './sounds/start-board.mp3',
+    startGame: './sounds/start-game.mp3',
+    letterClick: './sounds/letter-click.mp3'
   },
   init() {
     if (!this.ctx) {
