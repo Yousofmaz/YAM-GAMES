@@ -225,6 +225,7 @@ let currentRoom = '';
 let currentMode = 'setup';
 let lastBuzzCount = 0;
 let lastRevealedGoldIndex = null;
+let lastPlayedSoundSeq = 0;
 
 const IMAGE_COLUMNS_SPEC = [
   { col: 0, count: 5 },
@@ -248,7 +249,8 @@ let state = {
   players: {},
   boardStarted: false,
   letterRevealedOnBoard: false,
-  answerRevealedOnBoard: false
+  answerRevealedOnBoard: false,
+  soundEvent: null
 };
 
 const STORAGE_KEY = () => `horoof_room_${currentRoom}`;
@@ -266,7 +268,8 @@ function normalizeState(rawObj) {
     players: {},
     boardStarted: false,
     letterRevealedOnBoard: false,
-    answerRevealedOnBoard: false
+    answerRevealedOnBoard: false,
+    soundEvent: null
   };
   const merged = { ...base, ...(rawObj || {}) };
   merged.buzzQueue = Array.isArray(merged.buzzQueue) ? merged.buzzQueue : Object.values(merged.buzzQueue || {});
@@ -275,6 +278,7 @@ function normalizeState(rawObj) {
   merged.boardStarted = Boolean(merged.boardStarted);
   merged.letterRevealedOnBoard = Boolean(merged.letterRevealedOnBoard);
   merged.answerRevealedOnBoard = Boolean(merged.answerRevealedOnBoard);
+  merged.soundEvent = merged.soundEvent && typeof merged.soundEvent === 'object' ? merged.soundEvent : null;
   merged.cells = Array.isArray(merged.cells)
     ? merged.cells
     : Object.values(merged.cells || {});
@@ -290,6 +294,34 @@ function normalizeState(rawObj) {
   }));
 
   return merged;
+}
+
+function broadcastRoomSound(soundName) {
+  AudioFX.init();
+  const nextSeq = ((state.soundEvent && Number(state.soundEvent.seq)) || lastPlayedSoundSeq || 0) + 1;
+  lastPlayedSoundSeq = nextSeq;
+  state.soundEvent = {
+    type: soundName,
+    seq: nextSeq,
+    ts: getAccurateNow()
+  };
+
+  if (soundName === 'startBoard') AudioFX.playStartBoard();
+  else if (soundName === 'startGame') AudioFX.playStartGame();
+  else if (soundName === 'letterClick') AudioFX.playLetterClick();
+}
+
+function handleIncomingRoomSound(incoming) {
+  if (!incoming || !incoming.soundEvent || typeof incoming.soundEvent !== 'object') return;
+  const seq = Number(incoming.soundEvent.seq || 0);
+  if (!seq || seq <= lastPlayedSoundSeq) return;
+
+  lastPlayedSoundSeq = seq;
+  if (currentMode === 'player') return;
+
+  if (incoming.soundEvent.type === 'startBoard') AudioFX.playStartBoard();
+  else if (incoming.soundEvent.type === 'startGame') AudioFX.playStartGame();
+  else if (incoming.soundEvent.type === 'letterClick') AudioFX.playLetterClick();
 }
 
 function saveState() {
@@ -308,6 +340,9 @@ function loadState() {
   const raw = localStorage.getItem(STORAGE_KEY());
   if (raw) {
     state = normalizeState(JSON.parse(raw));
+    if (state.soundEvent && state.soundEvent.seq && !lastPlayedSoundSeq) {
+      lastPlayedSoundSeq = Number(state.soundEvent.seq);
+    }
   }
 }
 
@@ -325,6 +360,7 @@ function attachCloudListeners() {
       AudioFX.playBuzz();
     }
     lastBuzzCount = newBuzzLen;
+    handleIncomingRoomSound(incoming);
     state = incoming;
     localStorage.setItem(STORAGE_KEY(), JSON.stringify(state));
     renderAll();
@@ -338,6 +374,7 @@ window.addEventListener('storage', (e) => {
       AudioFX.playBuzz();
     }
     lastBuzzCount = incoming.buzzQueue.length;
+    handleIncomingRoomSound(incoming);
     state = incoming;
     renderAll();
   }
@@ -474,21 +511,19 @@ const GameController = {
     saveState();
   },
 
-  // زر "بدء لوحة" في لوحة المقدم + تشغيل صوت المقطع الأول (7 ثوانٍ)
+  // زر "بدء لوحة" في لوحة المقدم + تشغيل وبث صوت المقطع الأول (7 ثوانٍ)
   startBoard() {
-    AudioFX.init();
-    AudioFX.playStartBoard();
     state.boardStarted = true;
     if (!state.cells || state.cells.length !== TOTAL_LETTER_CELLS) {
       this.initBoard(false);
     }
+    broadcastRoomSound('startBoard');
     saveState();
   },
 
-  // زر "صوت بدء اللعبة" في لوحة المقدم + تشغيل صوت المقطع الثاني (ثانيتين)
+  // زر "صوت بدء اللعبة" في لوحة المقدم + تشغيل وبث صوت المقطع الثاني (ثانيتين)
   playStartGameSound() {
-    AudioFX.init();
-    AudioFX.playStartGame();
+    broadcastRoomSound('startGame');
   },
 
   newRound() {
@@ -518,7 +553,7 @@ const GameController = {
     state.buzzerLocked = false;
     lastBuzzCount = 0;
 
-    AudioFX.playLetterClick();
+    broadcastRoomSound('letterClick');
 
     if (cell.hasGoldBar && !cell.goldRevealed) {
       cell.goldRevealed = true;
@@ -534,7 +569,7 @@ const GameController = {
       alert('اختر حرفاً أولاً ليظهر على اللوحة');
       return;
     }
-    AudioFX.playLetterClick();
+    broadcastRoomSound('letterClick');
     state.letterRevealedOnBoard = true;
     state.answerRevealedOnBoard = false;
     saveState();
@@ -606,7 +641,7 @@ const GameController = {
       state.cells[state.activeIndex].letter = available[Math.floor(Math.random() * available.length)];
       state.questionIndex = 0;
       state.answerRevealedOnBoard = false;
-      AudioFX.playLetterClick();
+      broadcastRoomSound('letterClick');
       saveState();
     }
   },
