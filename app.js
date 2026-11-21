@@ -56,10 +56,20 @@ function getAccurateNow() {
 }
 
 // ==========================================
-// 1. محرك المؤثرات الصوتية بطابع برنامج حروف الكلاسيكي (Web Audio API)
+// 1. محرك المؤثرات الصوتية + دعم ملفات الصوت المرفوعة
 // ==========================================
 const AudioFX = {
   ctx: null,
+  customFiles: {
+    startBoard: null,
+    startGame: null,
+    letterClick: null
+  },
+  defaultPaths: {
+    startBoard: 'sounds/start-board.mp3',
+    startGame: 'sounds/start-game.mp3',
+    letterClick: 'sounds/letter-click.mp3'
+  },
   init() {
     if (!this.ctx) {
       this.ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -67,6 +77,25 @@ const AudioFX = {
     if (this.ctx.state === 'suspended') {
       this.ctx.resume();
     }
+  },
+  setCustomFile(key, inputEl) {
+    const file = inputEl && inputEl.files && inputEl.files[0];
+    if (!file) return;
+    if (this.customFiles[key]) {
+      URL.revokeObjectURL(this.customFiles[key]);
+    }
+    this.customFiles[key] = URL.createObjectURL(file);
+  },
+  tryPlayFile(key, fallbackFn) {
+    const src = this.customFiles[key] || this.defaultPaths[key];
+    if (!src) {
+      fallbackFn();
+      return;
+    }
+    const audio = new Audio(src);
+    audio.play().catch(() => {
+      fallbackFn();
+    });
   },
   tone(freq, type, duration, delay = 0, vol = 0.25) {
     this.init();
@@ -81,21 +110,43 @@ const AudioFX = {
     osc.start(this.ctx.currentTime + delay);
     osc.stop(this.ctx.currentTime + delay + duration);
   },
+  // مقطع 1 (~7 ثوانٍ): بدء لوحة
+  playStartBoard() {
+    this.tryPlayFile('startBoard', () => {
+      const notes = [392.0, 440.0, 523.25, 659.25, 783.99, 659.25, 523.25, 587.33, 783.99, 1046.5];
+      notes.forEach((f, i) => {
+        this.tone(f, i % 2 === 0 ? 'triangle' : 'square', 0.28, i * 0.55, 0.2);
+      });
+    });
+  },
+  // مقطع 2 (~2 ثانية): صوت بدء اللعبة
+  playStartGame() {
+    this.tryPlayFile('startGame', () => {
+      const seq = [523.25, 659.25, 783.99, 1046.5, 1318.5];
+      seq.forEach((f, i) => {
+        this.tone(f, 'square', 0.16, i * 0.22, 0.22);
+      });
+    });
+  },
+  // مقطع 3 (~1 ثانية): صوت ضغط المقدم على حرف
+  playLetterClick() {
+    this.tryPlayFile('letterClick', () => {
+      this.tone(880, 'square', 0.08, 0, 0.22);
+      this.tone(1174.66, 'triangle', 0.14, 0.06, 0.24);
+    });
+  },
   playShuffle() {
     for (let i = 0; i < 14; i++) {
       this.tone(280 + (i * 50), 'square', 0.065, i * 0.045, 0.14);
     }
   },
-  // صوت الضغط على حرف (نبضة كلاسيكية سريعة وحادة)
   playSelect() {
-    this.tone(740, 'square', 0.07, 0, 0.2);
-    this.tone(987.77, 'triangle', 0.12, 0.055, 0.24);
+    this.playLetterClick();
   },
   playBuzz() {
     this.tone(195, 'sawtooth', 0.32, 0, 0.35);
     this.tone(260, 'square', 0.28, 0.05, 0.25);
   },
-  // صوت الإجابة الصحيحة (نغمة صاعدة مبهجة)
   playCorrect() {
     [440, 554.37, 659.25, 880].forEach((f, i) => {
       this.tone(f, 'triangle', 0.16, i * 0.075, 0.28);
@@ -104,7 +155,6 @@ const AudioFX = {
   playWrong() {
     this.tone(140, 'sawtooth', 0.45, 0, 0.3);
   },
-  // صوت فوز الفريق (لحن ختامي احتفالي متتابع)
   playWin() {
     const fanfare = [
       { f: 523.25, d: 0.14, t: 0 },
@@ -116,7 +166,6 @@ const AudioFX = {
     ];
     fanfare.forEach(n => this.tone(n.f, 'square', n.d, n.t, 0.22));
   },
-  // صوت ظهور السبيكة الذهبية (رنة ذهبية لامعة ومتصاعدة)
   playGoldReveal() {
     const shimmer = [880, 1174.66, 1318.51, 1760, 2093];
     shimmer.forEach((f, i) => {
@@ -153,7 +202,10 @@ let state = {
   timer: 15,
   buzzerLocked: false,
   buzzQueue: [],
-  players: {}
+  players: {},
+  boardStarted: false,
+  letterRevealedOnBoard: false,
+  answerRevealedOnBoard: false
 };
 
 const STORAGE_KEY = () => `horoof_room_${currentRoom}`;
@@ -168,12 +220,18 @@ function normalizeState(rawObj) {
     timer: 15,
     buzzerLocked: false,
     buzzQueue: [],
-    players: {}
+    players: {},
+    boardStarted: false,
+    letterRevealedOnBoard: false,
+    answerRevealedOnBoard: false
   };
   const merged = { ...base, ...(rawObj || {}) };
   merged.buzzQueue = Array.isArray(merged.buzzQueue) ? merged.buzzQueue : Object.values(merged.buzzQueue || {});
   merged.buzzQueue.sort((a, b) => a.ts - b.ts);
   merged.players = merged.players && typeof merged.players === 'object' ? merged.players : {};
+  merged.boardStarted = Boolean(merged.boardStarted);
+  merged.letterRevealedOnBoard = Boolean(merged.letterRevealedOnBoard);
+  merged.answerRevealedOnBoard = Boolean(merged.answerRevealedOnBoard);
   merged.cells = Array.isArray(merged.cells)
     ? merged.cells
     : Object.values(merged.cells || {});
@@ -359,12 +417,31 @@ const GameController = {
 
     state.cells = this.assignHiddenGoldBars(rawCells);
     state.activeIndex = null;
+    state.letterRevealedOnBoard = false;
+    state.answerRevealedOnBoard = false;
     state.buzzQueue = [];
     state.buzzerLocked = false;
     lastBuzzCount = 0;
     lastRevealedGoldIndex = null;
     if (playSound) AudioFX.playShuffle();
     saveState();
+  },
+
+  // زر "بدء لوحة" في لوحة المقدم + تشغيل صوت المقطع الأول (7 ثوانٍ)
+  startBoard() {
+    AudioFX.init();
+    AudioFX.playStartBoard();
+    state.boardStarted = true;
+    if (!state.cells || state.cells.length !== TOTAL_LETTER_CELLS) {
+      this.initBoard(false);
+    }
+    saveState();
+  },
+
+  // زر "صوت بدء اللعبة" في لوحة المقدم + تشغيل صوت المقطع الثاني (ثانيتين)
+  playStartGameSound() {
+    AudioFX.init();
+    AudioFX.playStartGame();
   },
 
   newRound() {
@@ -388,11 +465,13 @@ const GameController = {
 
     state.activeIndex = index;
     state.questionIndex = 0;
+    state.letterRevealedOnBoard = false;
+    state.answerRevealedOnBoard = false;
     state.buzzQueue = [];
     state.buzzerLocked = false;
     lastBuzzCount = 0;
 
-    AudioFX.playSelect();
+    AudioFX.playLetterClick();
 
     if (cell.hasGoldBar && !cell.goldRevealed) {
       cell.goldRevealed = true;
@@ -402,12 +481,36 @@ const GameController = {
     saveState();
   },
 
+  // زر "إظهار الحرف على اللوحة" -> يظهر الحرف والسؤال والمؤقت على اللوحة
+  revealLetterOnBoard() {
+    if (state.activeIndex === null || !state.cells[state.activeIndex]) {
+      alert('اختر حرفاً أولاً ليظهر على اللوحة');
+      return;
+    }
+    AudioFX.playLetterClick();
+    state.letterRevealedOnBoard = true;
+    state.answerRevealedOnBoard = false;
+    saveState();
+  },
+
+  // زر "إظهار الإجابة" -> يظهر الإجابة أمام اللاعبين على اللوحة
+  revealAnswerOnBoard() {
+    if (state.activeIndex === null || !state.cells[state.activeIndex]) {
+      alert('اختر حرفاً أولاً لإظهار إجابته');
+      return;
+    }
+    AudioFX.playCorrect();
+    state.answerRevealedOnBoard = true;
+    saveState();
+  },
+
   nextQuestion() {
     if (state.activeIndex === null || !state.cells[state.activeIndex]) return;
     const letter = state.cells[state.activeIndex].letter;
     const list = QUESTIONS_DB[letter] || [];
     if (list.length > 0) {
       state.questionIndex = (state.questionIndex + 1) % list.length;
+      state.answerRevealedOnBoard = false;
       saveState();
     }
   },
@@ -421,6 +524,8 @@ const GameController = {
     }
 
     state.activeIndex = null;
+    state.letterRevealedOnBoard = false;
+    state.answerRevealedOnBoard = false;
     state.buzzQueue = [];
     state.buzzerLocked = false;
     lastBuzzCount = 0;
@@ -453,7 +558,8 @@ const GameController = {
     if (available.length > 0) {
       state.cells[state.activeIndex].letter = available[Math.floor(Math.random() * available.length)];
       state.questionIndex = 0;
-      AudioFX.playShuffle();
+      state.answerRevealedOnBoard = false;
+      AudioFX.playLetterClick();
       saveState();
     }
   },
@@ -610,6 +716,11 @@ function renderAll() {
   document.getElementById('hostRedScore').textContent = state.redScore;
   document.getElementById('hostTimer').textContent = state.timer;
 
+  const startBoardBtn = document.getElementById('startBoardBtn');
+  if (startBoardBtn) {
+    startBoardBtn.textContent = state.boardStarted ? '✅ اللوحة بدأت (إعادة تشغيل الصوت)' : '🚀 بدء لوحة';
+  }
+
   renderSvgHexBoard('hexGrid');
   renderSvgHexBoard('hostMiniGrid');
 
@@ -618,6 +729,18 @@ function renderAll() {
   const goldShowcaseLetter = document.getElementById('goldShowcaseLetter');
   const hostGoldAlert = document.getElementById('hostGoldAlert');
 
+  const revealLetterBtn = document.getElementById('revealLetterBtn');
+  if (revealLetterBtn) {
+    revealLetterBtn.disabled = !activeCell;
+  }
+
+  const stageShowcase = document.getElementById('boardStageShowcase');
+  const stageLetterEl = document.getElementById('boardStageLetter');
+  const stageTimerEl = document.getElementById('boardStageTimer');
+  const stageQuestionEl = document.getElementById('boardStageQuestion');
+  const stageAnswerBoxEl = document.getElementById('boardStageAnswerBox');
+  const stageAnswerEl = document.getElementById('boardStageAnswer');
+
   if (activeCell && activeCell.letter) {
     const qList = QUESTIONS_DB[activeCell.letter] || [{ q: 'سؤال حر من المقدم', a: '---' }];
     const currentQ = qList[state.questionIndex % qList.length];
@@ -625,6 +748,25 @@ function renderAll() {
     document.getElementById('hostSelectedLetter').textContent = activeCell.letter;
     document.getElementById('hostQuestionText').textContent = currentQ.q;
     document.getElementById('hostAnswerText').textContent = currentQ.a;
+
+    if (stageShowcase && state.letterRevealedOnBoard) {
+      stageShowcase.classList.remove('hidden');
+      if (stageLetterEl) stageLetterEl.textContent = activeCell.letter;
+      if (stageTimerEl) stageTimerEl.textContent = state.timer;
+      if (stageQuestionEl) stageQuestionEl.textContent = currentQ.q;
+
+      if (stageAnswerBoxEl && stageAnswerEl) {
+        if (state.answerRevealedOnBoard) {
+          stageAnswerBoxEl.classList.remove('hidden');
+          stageAnswerEl.textContent = currentQ.a;
+        } else {
+          stageAnswerBoxEl.classList.add('hidden');
+          stageAnswerEl.textContent = '---';
+        }
+      }
+    } else if (stageShowcase) {
+      stageShowcase.classList.add('hidden');
+    }
 
     if (activeCell.hasGoldBar && activeCell.goldRevealed) {
       if (goldShowcase) {
@@ -644,6 +786,7 @@ function renderAll() {
     document.getElementById('hostSelectedLetter').textContent = '-';
     document.getElementById('hostQuestionText').textContent = 'اختر حرفاً من اللوحة لعرض السؤال';
     document.getElementById('hostAnswerText').textContent = '---';
+    if (stageShowcase) stageShowcase.classList.add('hidden');
     if (goldShowcase) goldShowcase.classList.add('hidden');
     if (hostGoldAlert) hostGoldAlert.classList.add('hidden');
   }
