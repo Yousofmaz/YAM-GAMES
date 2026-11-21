@@ -7,7 +7,7 @@
   --green-bright: #16c75e;
   --red: #c91e28;
   --red-bright: #ff3b47;
-  --cell-cream: #fdfae6;
+  --cell-cream: #fffde3;
   --text-light: #f4f6fa;
 }
 
@@ -51,7 +51,7 @@ body {
   border: 2px solid rgba(245, 197, 66, 0.35);
   border-radius: 24px;
   padding: 32px;
-  max-width: 720px;
+  max-width: 740px;
   width: 100%;
   text-align: center;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
@@ -98,6 +98,27 @@ body {
   border-radius: 12px;
   width: 160px;
   text-transform: uppercase;
+}
+
+.sync-badge {
+  margin-top: 10px;
+  font-size: 0.82rem;
+  padding: 5px 12px;
+  border-radius: 20px;
+  display: inline-block;
+  font-weight: 700;
+}
+
+.sync-badge.online {
+  background: rgba(22, 199, 94, 0.18);
+  color: #4ade80;
+  border: 1px solid rgba(22, 199, 94, 0.4);
+}
+
+.sync-badge.offline {
+  background: rgba(245, 197, 66, 0.15);
+  color: var(--gold);
+  border: 1px solid rgba(245, 197, 66, 0.35);
 }
 
 .mode-grid {
@@ -190,6 +211,10 @@ button {
   color: #fff;
 }
 
+.full-width {
+  width: 100%;
+}
+
 /* شاشة اللوحة */
 .top-bar {
   display: flex;
@@ -244,102 +269,94 @@ button {
   justify-content: center;
 }
 
-/* اللوحة السداسية */
+/* حاوية اللوحة السداسية SVG */
 .board-container {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px 0;
+  padding: 14px;
 }
 
-.hex-frame {
-  position: relative;
-  padding: 26px 34px;
-  background: #111;
-  border-radius: 24px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
-  border: 4px solid #222;
-}
-
-.edge-top, .edge-bottom {
-  position: absolute;
-  left: 34px;
-  right: 34px;
-  height: 18px;
-  background: var(--green);
-}
-.edge-top { top: 0; border-radius: 18px 18px 0 0; }
-.edge-bottom { bottom: 0; border-radius: 0 0 18px 18px; }
-
-.edge-left, .edge-right {
-  position: absolute;
-  top: 18px;
-  bottom: 18px;
-  width: 24px;
-  background: var(--red);
-}
-.edge-left { left: 0; border-radius: 18px 0 0 18px; }
-.edge-right { right: 0; border-radius: 0 18px 18px 0; }
-
-.hex-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.hex-row {
-  display: flex;
-  gap: 6px;
-}
-
-.hex-row:nth-child(even) {
-  transform: translateX(-38px);
-}
-
-.hex-cell {
-  width: 78px;
-  height: 86px;
-  background: var(--cell-cream);
-  color: #111;
-  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+.classic-board-frame {
+  background: #050505;
+  padding: 6px;
+  border: 4px solid #090909;
+  box-shadow: 0 24px 65px rgba(0, 0, 0, 0.92);
+  width: 100%;
+  max-width: 760px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2rem;
-  font-weight: 900;
+}
+
+.classic-hex-board {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.classic-hex-board svg {
+  width: 100%;
+  height: auto;
+  max-height: 68vh;
+  display: block;
+}
+
+.mini-classic-board {
+  width: 100%;
+  background: #050505;
+  border-radius: 12px;
+  border: 2px solid #222;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mini-classic-board svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.hex-poly {
+  stroke: #070707;
+  stroke-width: 3.5;
+  transition: fill 0.2s ease, filter 0.2s ease;
+}
+
+.hex-letter-cell {
   cursor: pointer;
-  transition: transform 0.2s, background 0.3s;
+}
+
+.hex-letter-cell:hover .hex-poly {
+  filter: brightness(1.06);
+}
+
+.hex-letter-text {
+  font-family: 'Cairo', sans-serif;
+  font-weight: 900;
+  font-size: 38px;
+  fill: #080808;
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
   user-select: none;
 }
 
-.hex-cell:hover {
-  transform: scale(1.06);
+.hex-letter-cell.owned-green .hex-letter-text,
+.hex-letter-cell.owned-red .hex-letter-text {
+  fill: #ffffff;
 }
 
-.hex-cell.active-cell {
-  animation: pulseCell 0.7s infinite alternate;
-  background: var(--gold);
+.hex-letter-cell.active-cell .hex-poly {
+  fill: #f5c542;
 }
 
-.hex-cell.green {
-  background: var(--green-bright);
-  color: #fff;
-}
-
-.hex-cell.red {
-  background: var(--red-bright);
-  color: #fff;
-}
-
-.hex-cell.win-path {
-  box-shadow: inset 0 0 0 6px var(--gold);
-  animation: pulseCell 0.5s infinite alternate;
-}
-
-@keyframes pulseCell {
-  from { filter: brightness(1); transform: scale(1); }
-  to { filter: brightness(1.25); transform: scale(1.07); }
+.hex-letter-cell.active-cell .hex-letter-text {
+  fill: #111111;
 }
 
 /* شريط إعلان الجرس */
@@ -349,7 +366,6 @@ button {
   border-radius: 16px;
   padding: 12px 24px;
   margin-top: 12px;
-  animation: slideDown 0.3s ease;
 }
 
 .buzz-content {
@@ -368,20 +384,28 @@ button {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
   background: var(--card-bg);
   padding: 12px 20px;
   border-radius: 14px;
   margin-bottom: 16px;
 }
 
+.host-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .host-layout {
   display: grid;
-  grid-template-columns: 320px 1fr 320px;
+  grid-template-columns: 340px 1fr 320px;
   gap: 16px;
   flex: 1;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1100px) {
   .host-layout { grid-template-columns: 1fr; }
 }
 
@@ -395,21 +419,24 @@ button {
   gap: 14px;
 }
 
-.mini-hex-grid {
+.active-letter-header {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
   align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
-.mini-hex-grid .hex-row:nth-child(even) {
-  transform: translateX(-22px);
-}
-
-.mini-hex-grid .hex-cell {
-  width: 44px;
-  height: 48px;
-  font-size: 1.1rem;
+.letter-pill {
+  background: var(--gold);
+  color: #111;
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  font-weight: 900;
 }
 
 .qa-card {
@@ -437,6 +464,13 @@ button {
   gap: 10px;
 }
 
+.timer-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .buzz-queue {
   background: #0d1017;
   border-radius: 12px;
@@ -459,6 +493,26 @@ button {
 
 .buzz-item.green { border-right-color: var(--green-bright); }
 .buzz-item.red { border-right-color: var(--red-bright); }
+
+.host-players-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.host-team-box {
+  background: #0d1017;
+  border-radius: 12px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.host-team-box.green-box { border-top: 3px solid var(--green-bright); }
+.host-team-box.red-box { border-top: 3px solid var(--red-bright); }
+.host-team-title { font-size: 0.9rem; font-weight: 800; margin-bottom: 4px; }
+.host-player-name { font-size: 0.9rem; padding: 4px 8px; border-radius: 8px; background: #181f2e; }
 
 /* شاشة جرس اللاعب */
 #playerScreen {
@@ -502,6 +556,13 @@ button {
   cursor: pointer;
 }
 
+.player-top-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 800;
+}
+
 .big-buzzer {
   width: 230px;
   height: 230px;
@@ -526,6 +587,12 @@ button {
   background: #334155;
   box-shadow: none;
   opacity: 0.65;
+}
+
+.player-status {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--gold);
 }
 
 /* النوافذ المنبثقة */
@@ -578,14 +645,25 @@ button {
 .players-strip {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: 12px;
-  padding-top: 8px;
+  padding: 10px 16px;
+  background: var(--card-bg);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .strip-group {
   display: flex;
+  align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.strip-label {
+  font-size: 0.9rem;
+  font-weight: 800;
+  opacity: 0.9;
 }
 
 .player-chip {
@@ -595,5 +673,5 @@ button {
   font-weight: 700;
 }
 
-.green-list .player-chip { background: var(--green); }
-.red-list .player-chip { background: var(--red); }
+.green-list .player-chip { background: var(--green); color: #fff; }
+.red-list .player-chip { background: var(--red); color: #fff; }
