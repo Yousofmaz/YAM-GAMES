@@ -69,9 +69,21 @@
       <span id="boardBuzzDetails">---</span>
     </div>
 
-    <!-- لوحة السداسيات -->
+    <!-- عرض السبيكة الذهبية الخرافي عند اكتشافها -->
+    <div id="goldBarShowcase" class="gold-showcase hidden">
+      <div class="gold-showcase-inner">
+        <div class="gold-ingot-3d">🏅</div>
+        <div class="gold-showcase-copy">
+          <span class="gold-tag">✨ مفاجأة مخفية تم اكتشافها</span>
+          <strong>سبيكة ذهبية على الحرف (<span id="goldShowcaseLetter">-</span>)!</strong>
+          <p>الفائز بسؤال هذا الحرف يحصل على السبيكة الذهبية 🥇</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- لوحة السداسيات 3D -->
     <main class="board-main">
-      <div id="hexGrid" class="hex-board-container"></div>
+      <div id="hexGrid" class="hex-board-container board-3d-shell"></div>
     </main>
 
     <!-- شريط اللاعبين السفلي -->
@@ -96,10 +108,18 @@
     <div class="host-layout">
       <div class="host-panel">
         <h3>الحرف والسؤال الحالي</h3>
-        <div class="selected-letter-box">
-          <span>الحرف المحدد:</span>
-          <strong id="hostSelectedLetter">-</strong>
+        <div class="selected-letter-row">
+          <div class="selected-letter-box">
+            <span>الحرف المحدد:</span>
+            <strong id="hostSelectedLetter">-</strong>
+          </div>
+          <button type="button" class="btn gold-pick-btn" onclick="GameController.pickRandomLetter()">🎲 اختيار حرف عشوائي</button>
         </div>
+
+        <div id="hostGoldAlert" class="host-gold-alert hidden">
+          ✨ هذا الحرف يحتوي على <strong>سبيكة ذهبية مخفية</strong>!
+        </div>
+
         <p id="hostQuestionText" class="question-box">اختر حرفاً من اللوحة لعرض السؤال</p>
         <div class="answer-box">الإجابة: <strong id="hostAnswerText">---</strong></div>
 
@@ -129,7 +149,7 @@
         <div id="hostPlayersList" class="host-players-grid"></div>
 
         <h3>معاينة اللوحة السريعة</h3>
-        <div id="hostMiniGrid" class="mini-board-container"></div>
+        <div id="hostMiniGrid" class="mini-board-container board-3d-shell"></div>
       </div>
     </div>
   </section>
