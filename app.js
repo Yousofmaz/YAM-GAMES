@@ -542,7 +542,10 @@ const GameController = {
     state.buzzerLocked = false;
     lastBuzzCount = 0;
     lastRevealedGoldIndex = null;
-    if (playSound) AudioFX.playShuffle();
+    if (playSound) {
+      AudioFX.playShuffle();
+      broadcastRoomSound('startBoard');
+    }
     saveState();
   },
 
@@ -564,6 +567,7 @@ const GameController = {
   newRound() {
     this.stopTimer();
     state.timer = 15;
+    state.boardStarted = true;
     this.initBoard(true);
   },
 
