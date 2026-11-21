@@ -336,7 +336,6 @@ const GameController = {
   timerInterval: null,
 
   assignHiddenGoldBars(cells) {
-    // توزيع 3 إلى 4 سبائك ذهبية مخفية بشكل عشوائي على خلايا الحروف
     const goldCount = Math.floor(Math.random() * 2) + 3;
     const indices = cells.map((_, i) => i).sort(() => Math.random() - 0.5);
     const chosen = new Set(indices.slice(0, goldCount));
@@ -777,7 +776,6 @@ function hexPointsSvg(cx, cy, r) {
   return pts.join(' ');
 }
 
-// رسم اللوحة بنمط 3D مع خطوط واضحة وإظهار السبيكة الذهبية فقط عند كشفها
 function renderSvgHexBoard(containerId) {
   const container = document.getElementById(containerId);
   if (!container || !state.cells || state.cells.length === 0) return;
@@ -859,7 +857,6 @@ function renderSvgHexBoard(containerId) {
   const svg = document.createElementNS(svgNs, 'svg');
   svg.setAttribute('viewBox', '0 0 840 720');
 
-  // تعريف تدرجات وإضاءات 3D
   const defs = document.createElementNS(svgNs, 'defs');
 
   const createGrad = (id, topColor, bottomColor) => {
@@ -961,7 +958,6 @@ function renderSvgHexBoard(containerId) {
     poly.setAttribute('stroke-linejoin', 'round');
     poly.setAttribute('class', 'hex-poly');
 
-    // لمعة علوية خفيفة لإبراز العمق ثلاثي الأبعاد
     const shinePoly = document.createElementNS(svgNs, 'polygon');
     shinePoly.setAttribute('points', hexPointsSvg(cx, cy - 2, R * 0.84));
     shinePoly.setAttribute('fill', 'none');
@@ -979,7 +975,6 @@ function renderSvgHexBoard(containerId) {
     g.appendChild(shinePoly);
     g.appendChild(text);
 
-    // أيقونة السبيكة الذهبية تظهر فقط بعد كشف الحرف
     if (showGold) {
       const goldIcon = document.createElementNS(svgNs, 'text');
       goldIcon.setAttribute('x', cx);
