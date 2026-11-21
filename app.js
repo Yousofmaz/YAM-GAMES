@@ -606,7 +606,6 @@ function renderAll() {
   if (greenList) greenList.innerHTML = greenMarkup;
   if (redList) redList.innerHTML = redMarkup;
 
-  // عرض الأسماء فوق اللوحة بشكل واضح وجميل
   if (topPlayersBar) {
     topPlayersBar.innerHTML = `
       <div class="top-team-group green-group">
@@ -670,7 +669,6 @@ function hexPointsSvg(cx, cy, r) {
   return pts.join(' ');
 }
 
-// النسخة المعتمدة والمحفوظة لشكل الخلية[cite: 12]
 function renderSvgHexBoard(containerId) {
   const container = document.getElementById(containerId);
   if (!container || !state.cells || state.cells.length === 0) return;
