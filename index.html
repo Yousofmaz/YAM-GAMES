@@ -2,231 +2,198 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>سباق الحروف - النسخة الاحترافية</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>سباق الحروف — لوحة اللعب والجرس</title>
   <link rel="stylesheet" href="style.css" />
-  <!-- مكتبة توليد QR Code -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <!-- مكتبات Firebase للمزامنة الفورية بين جميع الأجهزة -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 </head>
 <body>
 
-  <!-- شاشة البداية واختيار الوضع -->
-  <div id="setupScreen" class="screen active">
+  <!-- شاشة إعداد الغرفة واختيار الوضع -->
+  <section id="setupScreen" class="screen active">
     <div class="setup-card">
-      <div class="logo-badge">سباق الحروف</div>
-      <p class="subtitle">اللعبة التفاعلية المتكاملة مع شاشة العرض، لوحة المقدم، وجرس الجوالات</p>
+      <h1>🎯 سباق الحروف</h1>
+      <p class="subtitle">اختر وضع التشغيل وشارك رمز الغرفة مع المقدم واللاعبين</p>
+
+      <div id="syncStatusBadge" class="sync-badge offline">جاري التحقق من الاتصال السحابي...</div>
 
       <div class="room-box">
-        <label>رمز الغرفة (لربط جميع الأجهزة ببعضها):</label>
+        <label for="roomCodeInput">رمز الغرفة</label>
         <div class="room-input-row">
-          <input type="text" id="roomCodeInput" maxlength="6" placeholder="مثال: YAM26" />
-          <button type="button" id="genRoomBtn" class="btn-secondary">توليد رمز</button>
+          <input type="text" id="roomCodeInput" maxlength="6" placeholder="مثال: YAM1" />
+          <button type="button" id="genRoomBtn" class="btn secondary-btn">توليد رمز</button>
         </div>
-        <div id="syncStatusBadge" class="sync-badge offline">وضع الاختبار المحلي (أضف مفاتيح Firebase للمزامنة عن بُعد)</div>
       </div>
 
-      <div class="mode-grid">
-        <button class="mode-btn board-mode" onclick="launchMode('board')">
-          <span class="mode-icon">📺</span>
-          <strong>شاشة اللوحة (للجمهور)</strong>
-          <small>تُعرض على الشاشة الكبيرة بدون أسئلة</small>
-        </button>
-
-        <button class="mode-btn host-mode" onclick="launchMode('host')">
-          <span class="mode-icon">🎙️</span>
-          <strong>لوحة تحكم المقدم</strong>
-          <small>الأسئلة والأجوبة والتحكم الكامل باللعبة</small>
-        </button>
-
-        <button class="mode-btn player-mode" onclick="launchMode('player')">
-          <span class="mode-icon">🚨</span>
-          <strong>جرس المتسابق (للجوال)</strong>
-          <small>التسجيل في فريق وضغط الجرس</small>
-        </button>
-      </div>
-
-      <div class="audio-test-bar">
-        <button type="button" class="btn-gold" onclick="AudioFX.playBuzz()">🔔 تجربة صوت الجرس</button>
-        <button type="button" class="btn-secondary" onclick="AudioFX.playShuffle()">🔊 تجربة مؤثرات اللعبة</button>
-        <button type="button" class="btn-outline" onclick="openQRModal()">📱 عرض باركود الجرس (QR)</button>
+      <div class="mode-buttons">
+        <button type="button" class="btn board-btn" onclick="launchMode('board')">📺 فتح شاشة اللوحة</button>
+        <button type="button" class="btn host-btn" onclick="launchMode('host')">🎙️ فتح لوحة المقدم</button>
+        <button type="button" class="btn player-btn" onclick="launchMode('player')">🔔 فتح جرس اللاعب</button>
       </div>
     </div>
-  </div>
+  </section>
 
-  <!-- 1. شاشة اللوحة فقط (Board View) -->
-  <div id="boardScreen" class="screen">
-    <header class="top-bar">
-      <div class="team-score green-team">
-        <span>الفريق الأخضر</span>
-        <strong id="boardGreenScore">0</strong>
+  <!-- شاشة اللوحة الرئيسية -->
+  <section id="boardScreen" class="screen">
+    <header class="board-header">
+      <div class="header-left-group">
+        <button type="button" class="back-btn" onclick="goBack()">← رجوع</button>
+        <div class="team-score green-score">
+          <span>الفريق الأخضر</span>
+          <strong id="boardGreenScore">0</strong>
+        </div>
       </div>
 
-      <div class="center-hud">
-        <div class="room-tag">غرفة: <span id="boardRoomLabel">----</span></div>
-        <div class="timer-display" id="boardTimer">15</div>
-        <button class="mini-btn" onclick="openQRModal()">📱 QR الجرس</button>
+      <div class="board-center-info">
+        <div class="room-pill">غرفة: <strong id="boardRoomLabel">----</strong></div>
+        <div class="timer-pill">⏱️ <strong id="boardTimer">15</strong></div>
+        <button type="button" class="btn qr-mini-btn" onclick="openQRModal()">📱 QR الجرس</button>
+        <button type="button" class="btn secondary-mini-btn" onclick="openBoardWindow()">↗ نافذة جديدة</button>
       </div>
 
-      <div class="team-score red-team">
+      <div class="team-score red-score">
         <span>الفريق الأحمر</span>
         <strong id="boardRedScore">0</strong>
       </div>
     </header>
 
-    <!-- إشعار الجرس على الشاشة -->
+    <!-- شريط أسماء اللاعبين فوق اللوحة -->
+    <div id="boardTopPlayersBar" class="board-top-players-bar"></div>
+
+    <!-- بنر أسرع ضاغط على الجرس -->
     <div id="boardBuzzBanner" class="buzz-banner hidden">
-      <div class="buzz-content">
-        <span class="buzz-icon">🚨</span>
-        <div>
-          <div id="boardBuzzName" class="buzz-player">اسم اللاعب</div>
-          <div id="boardBuzzDetails" class="buzz-meta">الفريق الأخضر • الأسرع!</div>
-        </div>
-      </div>
+      <span>⚡ الأسرع:</span>
+      <strong id="boardBuzzName">---</strong>
+      <span id="boardBuzzDetails">---</span>
     </div>
 
-    <!-- اللوحة السداسية المطابقة للصورة -->
-    <main class="board-container">
-      <div class="classic-board-frame">
-        <div id="hexGrid" class="classic-hex-board"></div>
-      </div>
+    <!-- لوحة السداسيات -->
+    <main class="board-main">
+      <div id="hexGrid" class="hex-board-container"></div>
     </main>
 
-    <!-- شريط اللاعبين المتصلين -->
-    <footer class="players-strip">
-      <div class="strip-group green-list" id="boardGreenPlayers"></div>
-      <div class="strip-group red-list" id="boardRedPlayers"></div>
+    <!-- شريط اللاعبين السفلي -->
+    <footer class="board-footer">
+      <div id="boardGreenPlayers" class="players-strip green-strip"></div>
+      <div id="boardRedPlayers" class="players-strip red-strip"></div>
     </footer>
-  </div>
+  </section>
 
-  <!-- 2. شاشة المقدم (Host View) -->
-  <div id="hostScreen" class="screen">
-    <header class="host-header">
-      <div>
-        <strong>🎙️ لوحة المقدم</strong> | غرفة: <span id="hostRoomLabel" class="gold-text">----</span>
-      </div>
-      <div class="host-actions">
-        <button class="btn-secondary" onclick="openQRModal()">📱 باركود اللاعبين</button>
-        <button class="btn-secondary" onclick="openBoardWindow()">📺 فتح شاشة اللوحة</button>
-        <button class="btn-danger" onclick="GameController.newRound()">🔄 جولة جديدة</button>
+  <!-- شاشة لوحة المقدم -->
+  <section id="hostScreen" class="screen">
+    <header class="top-bar">
+      <button type="button" class="back-btn" onclick="goBack()">← رجوع</button>
+      <h2>🎙️ لوحة المقدم — غرفة: <span id="hostRoomLabel">----</span></h2>
+      <div class="host-scores-inline">
+        <span class="green-tag">🟢 الأخضر: <strong id="hostGreenScore">0</strong></span>
+        <span class="red-tag">🔴 الأحمر: <strong id="hostRedScore">0</strong></span>
+        <span class="timer-tag">⏱️ <strong id="hostTimer">15</strong></span>
       </div>
     </header>
 
     <div class="host-layout">
-      <!-- العمود الأيمن: مصغرة اللوحة لاختيار الحروف -->
-      <section class="host-panel">
-        <h3>اختر حرفاً من اللوحة:</h3>
-        <div id="hostMiniGrid" class="mini-classic-board"></div>
-        <div class="host-scores-bar">
-          <span class="green-badge">الأخضر: <b id="hostGreenScore">0</b></span>
-          <span class="red-badge">الأحمر: <b id="hostRedScore">0</b></span>
+      <div class="host-panel">
+        <h3>الحرف والسؤال الحالي</h3>
+        <div class="selected-letter-box">
+          <span>الحرف المحدد:</span>
+          <strong id="hostSelectedLetter">-</strong>
         </div>
-      </section>
+        <p id="hostQuestionText" class="question-box">اختر حرفاً من اللوحة لعرض السؤال</p>
+        <div class="answer-box">الإجابة: <strong id="hostAnswerText">---</strong></div>
 
-      <!-- العمود الأوسط: السؤال والإجابة والتحكم -->
-      <section class="host-panel question-panel">
-        <div class="active-letter-header">
-          <span>الحرف المختار:</span>
-          <div id="hostSelectedLetter" class="letter-pill">-</div>
-          <button class="btn-outline" onclick="GameController.nextQuestion()">🔀 سؤال آخر لنفس الحرف</button>
-        </div>
-
-        <div class="qa-card">
-          <div class="q-label">السؤال:</div>
-          <div id="hostQuestionText" class="q-text">اضغط على أي حرف من اللوحة لعرض سؤاله</div>
-          <div class="a-label">الإجابة الصحيحة:</div>
-          <div id="hostAnswerText" class="a-text">---</div>
-        </div>
-
-        <div class="control-buttons">
-          <button class="btn-green" onclick="GameController.awardCell('green')">✅ إجابة صحيحة (الأخضر)</button>
-          <button class="btn-red" onclick="GameController.awardCell('red')">✅ إجابة صحيحة (الأحمر)</button>
-          <button class="btn-warning" onclick="GameController.passTurn()">🔁 تحويل السؤال</button>
-          <button class="btn-secondary" onclick="GameController.replaceLetter()">♻️ استبدال الحرف</button>
+        <div class="host-actions">
+          <button type="button" class="btn" onclick="GameController.nextQuestion()">🔄 سؤال آخر</button>
+          <button type="button" class="btn" onclick="GameController.replaceLetter()">🔀 تغيير الحرف</button>
+          <button type="button" class="btn green-btn" onclick="GameController.awardCell('green')">منح للأخضر 🟢</button>
+          <button type="button" class="btn red-btn" onclick="GameController.awardCell('red')">منح للأحمر 🔴</button>
+          <button type="button" class="btn secondary-btn" onclick="GameController.passTurn()">⏭️ تجاوز / فتح الجرس</button>
+          <button type="button" class="btn secondary-btn" onclick="GameController.unlockBuzzer()">🔓 فك قفل الجرس</button>
         </div>
 
         <div class="timer-controls">
-          <span>المؤقت (<b id="hostTimer">15</b> ث):</span>
-          <button class="btn-secondary" onclick="GameController.startTimer()">▶️ تشغيل</button>
-          <button class="btn-secondary" onclick="GameController.stopTimer()">⏸️ إيقاف</button>
-          <button class="btn-secondary" onclick="GameController.resetTimer()">🔄 إعادة</button>
+          <button type="button" class="btn" onclick="GameController.startTimer()">▶ بدء المؤقت</button>
+          <button type="button" class="btn secondary-btn" onclick="GameController.stopTimer()">⏸ إيقاف</button>
+          <button type="button" class="btn secondary-btn" onclick="GameController.resetTimer()">↺ إعادة 15ث</button>
+          <button type="button" class="btn secondary-btn" onclick="GameController.newRound()">🎲 جولة جديدة</button>
+          <button type="button" class="btn qr-mini-btn" onclick="openQRModal()">📱 رابط / QR اللاعبين</button>
         </div>
-      </section>
+      </div>
 
-      <!-- العمود الثالث: الجرس الذكي وترتيب السرعة -->
-      <section class="host-panel buzzer-panel">
-        <div class="buzzer-header">
-          <h3>🚨 ترتيب ضغط الجرس</h3>
-          <button class="btn-gold" onclick="GameController.unlockBuzzer()">🔓 فتح الجرس للجميع</button>
-        </div>
-        <div id="hostBuzzQueue" class="buzz-queue">
-          <p class="muted">بانتظار ضغط اللاعبين على الجرس...</p>
-        </div>
+      <div class="host-panel">
+        <h3>⚡ ترتيب الضغط على الجرس</h3>
+        <div id="hostBuzzQueue" class="buzz-queue"></div>
 
-        <h4>اللاعبون المتصلون:</h4>
-        <div id="hostPlayersList" class="host-players-list"></div>
-      </section>
+        <h3>👥 اللاعبون المتصلون</h3>
+        <div id="hostPlayersList" class="host-players-grid"></div>
+
+        <h3>معاينة اللوحة السريعة</h3>
+        <div id="hostMiniGrid" class="mini-board-container"></div>
+      </div>
     </div>
-  </div>
+  </section>
 
-  <!-- 3. شاشة جرس اللاعب (Player Buzzer View) -->
-  <div id="playerScreen" class="screen">
+  <!-- شاشة جرس اللاعب -->
+  <section id="playerScreen" class="screen">
+    <header class="top-bar">
+      <button type="button" class="back-btn" onclick="goBack()">← رجوع</button>
+      <h2>🔔 جرس اللاعب — غرفة: <span id="playerRoomLabel">----</span></h2>
+    </header>
+
     <div id="playerJoinForm" class="player-card">
-      <h2>انضم إلى المسابقة</h2>
-      <p>غرفة رقم: <strong id="playerRoomLabel" class="gold-text">----</strong></p>
+      <h3>انضم إلى اللعبة</h3>
+      <label for="playerNameInput">اسمك</label>
+      <input type="text" id="playerNameInput" placeholder="اكتب اسمك هنا" />
 
-      <input type="text" id="playerNameInput" placeholder="اكتب اسمك هنا..." maxlength="18" />
-
-      <div class="team-selector">
-        <label class="team-option green-opt">
+      <div class="team-choice">
+        <label class="team-radio green-radio">
           <input type="radio" name="playerTeam" value="green" checked />
           <span>الفريق الأخضر 🟢</span>
         </label>
-        <label class="team-option red-opt">
+        <label class="team-radio red-radio">
           <input type="radio" name="playerTeam" value="red" />
           <span>الفريق الأحمر 🔴</span>
         </label>
       </div>
 
-      <button class="btn-gold full-width" onclick="PlayerClient.join()">دخول إلى الجرس 🚀</button>
+      <button type="button" class="btn player-btn full-width" onclick="PlayerClient.join()">دخول الجرس</button>
     </div>
 
-    <div id="playerBuzzerPad" class="player-pad hidden">
-      <div class="player-top-info">
-        <span id="pDisplayName">اللاعب</span>
-        <span id="pDisplayTeam" class="badge">الفريق</span>
+    <div id="playerBuzzerPad" class="buzzer-pad hidden">
+      <div class="player-badge">
+        <strong id="pDisplayName">---</strong>
+        <span id="pDisplayTeam">---</span>
       </div>
 
-      <button id="bigBuzzerBtn" class="big-buzzer" onclick="PlayerClient.buzz()">
-        <span class="buzzer-ring"></span>
-        <span class="buzzer-label">اضغط للإجابة!</span>
+      <button type="button" id="bigBuzzerBtn" class="big-buzzer-btn" onclick="PlayerClient.buzz()">
+        🔔 اضغط هنا!
       </button>
 
-      <div id="playerStatusMsg" class="player-status">الجرس جاهز.. كن الأسرع!</div>
+      <p id="playerStatusMsg" class="player-status">الجرس جاهز.. كن الأسرع!</p>
     </div>
-  </div>
+  </section>
 
-  <!-- نافذة باركود QR -->
+  <!-- نافذة QR ورابط اللاعبين -->
   <div id="qrModal" class="modal hidden">
-    <div class="modal-box">
-      <button class="close-modal" onclick="closeQRModal()">✖</button>
-      <h3>امسح الكود بجوالك للدخول للجرس</h3>
+    <div class="modal-card">
+      <button type="button" class="close-modal-btn" onclick="closeQRModal()">✕</button>
+      <h3>📱 رابط جرس اللاعبين</h3>
       <div id="qrcodeContainer" class="qr-box"></div>
-      <p class="qr-url" id="qrDirectLink"></p>
-      <button class="btn-gold" onclick="copyPlayerLink()">📋 نسخ رابط الجرس</button>
+      <p id="qrDirectLink" class="qr-link-text"></p>
+      <div class="modal-actions">
+        <button type="button" class="btn" onclick="copyPlayerLink()">📋 نسخ الرابط</button>
+        <button type="button" class="btn secondary-btn" onclick="closeQRModal()">إغلاق</button>
+      </div>
     </div>
   </div>
 
-  <!-- نافذة إعلان الفائز -->
+  <!-- نافذة الفوز -->
   <div id="winModal" class="modal hidden">
-    <div class="modal-box win-box">
-      <h1 id="winTitle">مبروك الفوز!</h1>
-      <p id="winSubtitle">تم توصيل المسار بنجاح</p>
-      <button class="btn-gold" onclick="closeWinModal()">بدء جولة جديدة</button>
+    <div class="modal-card win-card">
+      <h2 id="winTitle">🏆 مبروك!</h2>
+      <p>اكتمل المسار الفائز في اللوحة!</p>
+      <button type="button" class="btn" onclick="closeWinModal()">جولة جديدة</button>
     </div>
   </div>
 
