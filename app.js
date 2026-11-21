@@ -92,9 +92,13 @@ const AudioFX = {
     });
   },
   unlockOnInteraction() {
-    if (this.unlocked) return;
     this.unlocked = true;
     this.init();
+
+    const btn = document.getElementById('boardAudioUnlockBtn');
+    if (btn && currentMode === 'board') {
+      btn.textContent = '🔊 الصوت مفعّل';
+    }
 
     const firstSrc = this.customFiles.letterClick || this.defaultPaths.letterClick;
     if (firstSrc) {
@@ -136,9 +140,17 @@ const AudioFX = {
     audio.preload = 'auto';
     this.activeAudios[key] = audio;
 
-    audio.play().catch(() => {
-      if (typeof fallbackFn === 'function') fallbackFn();
-    });
+    const playPromise = audio.play();
+    if (playPromise && typeof playPromise.catch === 'function') {
+      playPromise.catch((err) => {
+        console.warn('Audio play blocked or failed for', key, src, err);
+        const btn = document.getElementById('boardAudioUnlockBtn');
+        if (btn && currentMode === 'board') {
+          btn.textContent = '🔇 اضغط لتفعيل الصوت';
+        }
+        if (typeof fallbackFn === 'function') fallbackFn();
+      });
+    }
   },
   tone(freq, type, duration, delay = 0, vol = 0.25) {
     this.init();
@@ -217,6 +229,11 @@ const AudioFX = {
     });
   }
 };
+
+function unlockBoardAudioManually() {
+  AudioFX.unlockOnInteraction();
+  AudioFX.playLetterClick();
+}
 
 // ==========================================
 // 2. إدارة حالة الغرفة والمزامنة
