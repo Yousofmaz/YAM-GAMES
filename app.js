@@ -243,6 +243,7 @@ let currentMode = 'setup';
 let lastBuzzCount = 0;
 let lastRevealedGoldIndex = null;
 let lastPlayedSoundSeq = 0;
+let lastPlayedSoundTs = 0;
 
 const IMAGE_COLUMNS_SPEC = [
   { col: 0, count: 5 },
@@ -313,32 +314,44 @@ function normalizeState(rawObj) {
   return merged;
 }
 
+function playSoundByType(soundType) {
+  if (currentMode === 'player') return;
+  if (soundType === 'startBoard') AudioFX.playStartBoard();
+  else if (soundType === 'startGame') AudioFX.playStartGame();
+  else if (soundType === 'letterClick') AudioFX.playLetterClick();
+}
+
 function broadcastRoomSound(soundName) {
   AudioFX.init();
-  const nextSeq = ((state.soundEvent && Number(state.soundEvent.seq)) || lastPlayedSoundSeq || 0) + 1;
+  const nowTs = getAccurateNow();
+  const nextSeq = Math.max(
+    Number((state.soundEvent && state.soundEvent.seq) || 0),
+    Number(lastPlayedSoundSeq || 0)
+  ) + 1;
+
   lastPlayedSoundSeq = nextSeq;
+  lastPlayedSoundTs = nowTs;
+
   state.soundEvent = {
     type: soundName,
     seq: nextSeq,
-    ts: getAccurateNow()
+    ts: nowTs
   };
 
-  if (soundName === 'startBoard') AudioFX.playStartBoard();
-  else if (soundName === 'startGame') AudioFX.playStartGame();
-  else if (soundName === 'letterClick') AudioFX.playLetterClick();
+  playSoundByType(soundName);
 }
 
 function handleIncomingRoomSound(incoming) {
   if (!incoming || !incoming.soundEvent || typeof incoming.soundEvent !== 'object') return;
   const seq = Number(incoming.soundEvent.seq || 0);
-  if (!seq || seq <= lastPlayedSoundSeq) return;
+  const ts = Number(incoming.soundEvent.ts || 0);
+  const isNewer = (seq > 0 && seq > lastPlayedSoundSeq) || (ts > 0 && ts > lastPlayedSoundTs && seq >= lastPlayedSoundSeq);
+  if (!isNewer) return;
 
-  lastPlayedSoundSeq = seq;
-  if (currentMode === 'player') return;
+  if (seq > 0) lastPlayedSoundSeq = Math.max(lastPlayedSoundSeq, seq);
+  if (ts > 0) lastPlayedSoundTs = Math.max(lastPlayedSoundTs, ts);
 
-  if (incoming.soundEvent.type === 'startBoard') AudioFX.playStartBoard();
-  else if (incoming.soundEvent.type === 'startGame') AudioFX.playStartGame();
-  else if (incoming.soundEvent.type === 'letterClick') AudioFX.playLetterClick();
+  playSoundByType(incoming.soundEvent.type);
 }
 
 function saveState() {
@@ -357,8 +370,13 @@ function loadState() {
   const raw = localStorage.getItem(STORAGE_KEY());
   if (raw) {
     state = normalizeState(JSON.parse(raw));
-    if (state.soundEvent && state.soundEvent.seq && !lastPlayedSoundSeq) {
-      lastPlayedSoundSeq = Number(state.soundEvent.seq);
+    if (state.soundEvent) {
+      if (state.soundEvent.seq) {
+        lastPlayedSoundSeq = Math.max(lastPlayedSoundSeq, Number(state.soundEvent.seq));
+      }
+      if (state.soundEvent.ts) {
+        lastPlayedSoundTs = Math.max(lastPlayedSoundTs, Number(state.soundEvent.ts));
+      }
     }
   }
 }
