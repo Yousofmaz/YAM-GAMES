@@ -56,7 +56,7 @@ function getAccurateNow() {
 }
 
 // ==========================================
-// 1. محرك المؤثرات الصوتية للعبة (Web Audio API)
+// 1. محرك المؤثرات الصوتية الأصلية (Web Audio API)
 // ==========================================
 const AudioFX = {
   ctx: null,
@@ -68,71 +68,50 @@ const AudioFX = {
       this.ctx.resume();
     }
   },
-  tone(freq, type, duration, delay = 0, vol = 0.25, slideTo = null) {
+  tone(freq, type, duration, delay = 0, vol = 0.25) {
     this.init();
-    const now = this.ctx.currentTime + delay;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     osc.type = type;
-    osc.frequency.setValueAtTime(freq, now);
-    if (slideTo !== null) {
-      osc.frequency.exponentialRampToValueAtTime(slideTo, now + duration);
-    }
-    gain.gain.setValueAtTime(0.001, now);
-    gain.gain.linearRampToValueAtTime(vol, now + 0.015);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+    osc.frequency.setValueAtTime(freq, this.ctx.currentTime + delay);
+    gain.gain.setValueAtTime(vol, this.ctx.currentTime + delay);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + delay + duration);
     osc.connect(gain);
     gain.connect(this.ctx.destination);
-    osc.start(now);
-    osc.stop(now + duration + 0.02);
+    osc.start(this.ctx.currentTime + delay);
+    osc.stop(this.ctx.currentTime + delay + duration);
   },
   playShuffle() {
-    const notes = [440, 554.37, 659.25, 880, 587.33, 783.99, 987.77, 1046.5];
-    notes.forEach((f, i) => {
-      this.tone(f, 'triangle', 0.075, i * 0.055, 0.24, f * 1.06);
-    });
+    for (let i = 0; i < 14; i++) {
+      this.tone(300 + (i * 45), 'triangle', 0.08, i * 0.05, 0.2);
+    }
   },
+  // الصوت الأصلي عند الضغط على حرف
   playSelect() {
-    this.tone(660, 'sine', 0.11, 0, 0.28, 880);
-    this.tone(990, 'triangle', 0.16, 0.07, 0.22);
-  },
-  playGoldReveal() {
-    const sparkle = [783.99, 987.77, 1174.66, 1567.98, 2093.0];
-    sparkle.forEach((f, i) => {
-      this.tone(f, 'triangle', 0.22, i * 0.07, 0.34, f * 1.04);
-      this.tone(f * 0.5, 'sine', 0.2, i * 0.07, 0.16);
-    });
+    this.tone(587.33, 'sine', 0.15, 0, 0.3);
+    this.tone(880, 'sine', 0.25, 0.1, 0.3);
   },
   playBuzz() {
-    this.tone(1318.5, 'sine', 0.16, 0, 0.42, 1244.5);
-    this.tone(2637, 'triangle', 0.14, 0.01, 0.26);
-    this.tone(1396.9, 'sine', 0.24, 0.11, 0.45, 1318.5);
-    this.tone(2793.8, 'triangle', 0.2, 0.12, 0.28);
+    this.tone(220, 'sawtooth', 0.35, 0, 0.45);
+    this.tone(330, 'square', 0.35, 0.04, 0.35);
+    this.tone(660, 'triangle', 0.25, 0.12, 0.35);
   },
+  // الصوت الأصلي عند الإجابة الصحيحة
   playCorrect() {
-    const chord = [523.25, 659.25, 783.99, 1046.5, 1318.5];
-    chord.forEach((f, i) => {
-      this.tone(f, 'triangle', 0.24, i * 0.075, 0.32);
-      this.tone(f * 1.5, 'sine', 0.16, i * 0.075 + 0.02, 0.14);
-    });
+    [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => this.tone(f, 'triangle', 0.25, i * 0.09, 0.35));
   },
   playWrong() {
-    this.tone(240, 'sawtooth', 0.24, 0, 0.3, 175);
-    this.tone(175, 'sawtooth', 0.38, 0.2, 0.32, 115);
+    this.tone(150, 'sawtooth', 0.5, 0, 0.35);
   },
+  // الصوت الأصلي عند فوز الفريق
   playWin() {
-    const fanfare = [
-      { f: 523.25, d: 0.14, t: 0 },
-      { f: 659.25, d: 0.14, t: 0.13 },
-      { f: 783.99, d: 0.14, t: 0.26 },
-      { f: 1046.5, d: 0.26, t: 0.39 },
-      { f: 783.99, d: 0.14, t: 0.66 },
-      { f: 1046.5, d: 0.45, t: 0.80 }
-    ];
-    fanfare.forEach((n) => {
-      this.tone(n.f, 'triangle', n.d, n.t, 0.34);
-      this.tone(n.f * 0.5, 'sine', n.d, n.t, 0.2);
-    });
+    const notes = [523, 659, 783, 1046, 783, 1046];
+    notes.forEach((n, i) => this.tone(n, 'square', 0.3, i * 0.14, 0.3));
+  },
+  // صوت ظهور السبيكة الذهبية
+  playGoldReveal() {
+    const goldNotes = [783.99, 1046.5, 1318.5, 1567.98, 2093.0];
+    goldNotes.forEach((f, i) => this.tone(f, 'triangle', 0.22, i * 0.08, 0.35));
   }
 };
 
@@ -402,16 +381,11 @@ const GameController = {
     state.buzzerLocked = false;
     lastBuzzCount = 0;
 
-    let revealedNow = false;
+    AudioFX.playSelect();
+
     if (cell.hasGoldBar && !cell.goldRevealed) {
       cell.goldRevealed = true;
-      revealedNow = true;
-    }
-
-    if (revealedNow) {
       AudioFX.playGoldReveal();
-    } else {
-      AudioFX.playSelect();
     }
 
     saveState();
@@ -485,7 +459,7 @@ const GameController = {
     this.timerInterval = setInterval(() => {
       if (state.timer > 0) {
         state.timer--;
-        if (state.timer <= 5 && state.timer > 0) AudioFX.tone(980, 'sine', 0.09, 0, 0.24);
+        if (state.timer <= 5 && state.timer > 0) AudioFX.tone(800, 'sine', 0.1, 0, 0.2);
         if (state.timer === 0) AudioFX.playWrong();
         saveState();
       } else {
