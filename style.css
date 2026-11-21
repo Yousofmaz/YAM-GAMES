@@ -464,6 +464,35 @@ body {
   filter: brightness(1.06);
 }
 
+/* رمش الخلية والحرف عند الضغط عليه */
+.hex-letter-cell.active-cell .hex-poly {
+  animation: cellBlinkPulse 0.75s ease-in-out infinite;
+}
+
+.hex-letter-cell.active-cell .hex-letter-text {
+  animation: letterBlinkText 0.75s ease-in-out infinite;
+}
+
+@keyframes cellBlinkPulse {
+  0%, 100% {
+    opacity: 1;
+    filter: brightness(1);
+  }
+  50% {
+    opacity: 0.35;
+    filter: brightness(1.35);
+  }
+}
+
+@keyframes letterBlinkText {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.2;
+  }
+}
+
 .hex-letter-text {
   font-size: 31px;
   font-weight: 900;
