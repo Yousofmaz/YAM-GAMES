@@ -56,7 +56,7 @@ function getAccurateNow() {
 }
 
 // ==========================================
-// 1. محرك المؤثرات الصوتية الأصلية (Web Audio API)
+// 1. محرك المؤثرات الصوتية بطابع برنامج حروف الكلاسيكي (Web Audio API)
 // ==========================================
 const AudioFX = {
   ctx: null,
@@ -83,35 +83,46 @@ const AudioFX = {
   },
   playShuffle() {
     for (let i = 0; i < 14; i++) {
-      this.tone(300 + (i * 45), 'triangle', 0.08, i * 0.05, 0.2);
+      this.tone(280 + (i * 50), 'square', 0.065, i * 0.045, 0.14);
     }
   },
-  // الصوت الأصلي عند الضغط على حرف
+  // صوت الضغط على حرف (نبضة كلاسيكية سريعة وحادة)
   playSelect() {
-    this.tone(587.33, 'sine', 0.15, 0, 0.3);
-    this.tone(880, 'sine', 0.25, 0.1, 0.3);
+    this.tone(740, 'square', 0.07, 0, 0.2);
+    this.tone(987.77, 'triangle', 0.12, 0.055, 0.24);
   },
   playBuzz() {
-    this.tone(220, 'sawtooth', 0.35, 0, 0.45);
-    this.tone(330, 'square', 0.35, 0.04, 0.35);
-    this.tone(660, 'triangle', 0.25, 0.12, 0.35);
+    this.tone(195, 'sawtooth', 0.32, 0, 0.35);
+    this.tone(260, 'square', 0.28, 0.05, 0.25);
   },
-  // الصوت الأصلي عند الإجابة الصحيحة
+  // صوت الإجابة الصحيحة (نغمة صاعدة مبهجة)
   playCorrect() {
-    [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => this.tone(f, 'triangle', 0.25, i * 0.09, 0.35));
+    [440, 554.37, 659.25, 880].forEach((f, i) => {
+      this.tone(f, 'triangle', 0.16, i * 0.075, 0.28);
+    });
   },
   playWrong() {
-    this.tone(150, 'sawtooth', 0.5, 0, 0.35);
+    this.tone(140, 'sawtooth', 0.45, 0, 0.3);
   },
-  // الصوت الأصلي عند فوز الفريق
+  // صوت فوز الفريق (لحن ختامي احتفالي متتابع)
   playWin() {
-    const notes = [523, 659, 783, 1046, 783, 1046];
-    notes.forEach((n, i) => this.tone(n, 'square', 0.3, i * 0.14, 0.3));
+    const fanfare = [
+      { f: 523.25, d: 0.14, t: 0 },
+      { f: 659.25, d: 0.14, t: 0.14 },
+      { f: 783.99, d: 0.14, t: 0.28 },
+      { f: 1046.5, d: 0.26, t: 0.42 },
+      { f: 783.99, d: 0.14, t: 0.72 },
+      { f: 1046.5, d: 0.42, t: 0.88 }
+    ];
+    fanfare.forEach(n => this.tone(n.f, 'square', n.d, n.t, 0.22));
   },
-  // صوت ظهور السبيكة الذهبية
+  // صوت ظهور السبيكة الذهبية (رنة ذهبية لامعة ومتصاعدة)
   playGoldReveal() {
-    const goldNotes = [783.99, 1046.5, 1318.5, 1567.98, 2093.0];
-    goldNotes.forEach((f, i) => this.tone(f, 'triangle', 0.22, i * 0.08, 0.35));
+    const shimmer = [880, 1174.66, 1318.51, 1760, 2093];
+    shimmer.forEach((f, i) => {
+      this.tone(f, 'sine', 0.18, i * 0.07, 0.28);
+      this.tone(f * 1.5, 'triangle', 0.12, i * 0.07 + 0.02, 0.12);
+    });
   }
 };
 
