@@ -210,7 +210,7 @@ window.addEventListener('storage', (e) => {
 });
 
 // ==========================================
-// 3. تهيئة الروابط والأوضاع
+// 3. تهيئة الروابط والأوضاع + زر الرجوع
 // ==========================================
 window.addEventListener('DOMContentLoaded', () => {
   const params = new URLSearchParams(window.location.search);
@@ -231,8 +231,25 @@ window.addEventListener('DOMContentLoaded', () => {
 
   if (modeParam && roomParam) {
     launchMode(modeParam, roomParam.toUpperCase());
+  } else {
+    showSetupScreen();
   }
 });
+
+function showSetupScreen() {
+  currentMode = 'setup';
+  GameController.stopTimer();
+  const cleanUrl = `${window.location.pathname}`;
+  window.history.replaceState({}, '', cleanUrl);
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const setupEl = document.getElementById('setupScreen');
+  if (setupEl) setupEl.classList.add('active');
+}
+
+function goBack() {
+  AudioFX.init();
+  showSetupScreen();
+}
 
 function launchMode(mode, forcedRoom = null) {
   AudioFX.init();
@@ -569,21 +586,47 @@ function renderAll() {
 
   const greenList = document.getElementById('boardGreenPlayers');
   const redList = document.getElementById('boardRedPlayers');
+  const topPlayersBar = document.getElementById('boardTopPlayersBar');
   const hostPlayers = document.getElementById('hostPlayersList');
 
   const playersArr = Object.values(state.players || {});
   const greenPlayers = playersArr.filter(p => p.team === 'green');
   const redPlayers = playersArr.filter(p => p.team === 'red');
 
-  greenList.innerHTML = `<span class="strip-label">🟢 الأخضر (${greenPlayers.length}):</span>` +
+  const greenMarkup = `<span class="strip-label">🟢 الأخضر (${greenPlayers.length}):</span>` +
     (greenPlayers.length
-      ? greenPlayers.map(p => `<span class="player-chip">${p.name}</span>`).join('')
+      ? greenPlayers.map(p => `<span class="player-chip green-chip">${p.name}</span>`).join('')
       : '<span class="muted">لا يوجد لاعبون</span>');
 
-  redList.innerHTML = `<span class="strip-label">🔴 الأحمر (${redPlayers.length}):</span>` +
+  const redMarkup = `<span class="strip-label">🔴 الأحمر (${redPlayers.length}):</span>` +
     (redPlayers.length
-      ? redPlayers.map(p => `<span class="player-chip">${p.name}</span>`).join('')
+      ? redPlayers.map(p => `<span class="player-chip red-chip">${p.name}</span>`).join('')
       : '<span class="muted">لا يوجد لاعبون</span>');
+
+  if (greenList) greenList.innerHTML = greenMarkup;
+  if (redList) redList.innerHTML = redMarkup;
+
+  // عرض الأسماء فوق اللوحة بشكل واضح وجميل
+  if (topPlayersBar) {
+    topPlayersBar.innerHTML = `
+      <div class="top-team-group green-group">
+        <span class="top-team-badge">🟢 الفريق الأخضر (${greenPlayers.length})</span>
+        <div class="top-chips-wrap">
+          ${greenPlayers.length
+            ? greenPlayers.map(p => `<span class="top-player-pill green-pill">${p.name}</span>`).join('')
+            : '<span class="top-empty-text">بانتظار اللاعبين</span>'}
+        </div>
+      </div>
+      <div class="top-team-group red-group">
+        <span class="top-team-badge">🔴 الفريق الأحمر (${redPlayers.length})</span>
+        <div class="top-chips-wrap">
+          ${redPlayers.length
+            ? redPlayers.map(p => `<span class="top-player-pill red-pill">${p.name}</span>`).join('')
+            : '<span class="top-empty-text">بانتظار اللاعبين</span>'}
+        </div>
+      </div>
+    `;
+  }
 
   hostPlayers.innerHTML = `
     <div class="host-team-box green-box">
@@ -627,6 +670,7 @@ function hexPointsSvg(cx, cy, r) {
   return pts.join(' ');
 }
 
+// النسخة المعتمدة والمحفوظة لشكل الخلية[cite: 12]
 function renderSvgHexBoard(containerId) {
   const container = document.getElementById(containerId);
   if (!container || !state.cells || state.cells.length === 0) return;
@@ -648,7 +692,6 @@ function renderSvgHexBoard(containerId) {
     const stagger = (visualCol % 2 === 1) ? (dy * 0.5) : 0;
     const startY = centerY - ((rowsCount - 1) * dy) / 2 + stagger;
 
-    // السطر الأخضر العلوي
     allHexes.push({ type: 'border', color: '#077e36', cx, cy: startY - dy });
 
     const colCells = state.cells
@@ -665,12 +708,10 @@ function renderSvgHexBoard(containerId) {
       });
     });
 
-    // السطر الأخضر السفلي مقلوب رأسياً على عقب ليطابق الأعمدة من الأسفل
     const flippedBottomY = baseBottomY - stagger;
     allHexes.push({ type: 'border', color: '#077e36', cx, cy: flippedBottomY });
   }
 
-  // حواف حمراء يسار ويمين ملاصقة تماماً للأعمدة المجاورة
   const leftColX = centerX + 2 * dx;
   const rightColX = centerX - 2 * dx;
   const leftStagger = (0 % 2 === 1) ? (dy * 0.5) : 0;
