@@ -56,7 +56,7 @@ function getAccurateNow() {
 }
 
 // ==========================================
-// 1. محرك المؤثرات الصوتية الأصلية (Web Audio API)
+// 1. محرك المؤثرات الصوتية للعبة (Web Audio API)
 // ==========================================
 const AudioFX = {
   ctx: null,
@@ -68,42 +68,72 @@ const AudioFX = {
       this.ctx.resume();
     }
   },
-  tone(freq, type, duration, delay = 0, vol = 0.25) {
+  tone(freq, type, duration, delay = 0, vol = 0.25, slideTo = null) {
     this.init();
+    const now = this.ctx.currentTime + delay;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     osc.type = type;
-    osc.frequency.setValueAtTime(freq, this.ctx.currentTime + delay);
-    gain.gain.setValueAtTime(vol, this.ctx.currentTime + delay);
-    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + delay + duration);
+    osc.frequency.setValueAtTime(freq, now);
+    if (slideTo !== null) {
+      osc.frequency.exponentialRampToValueAtTime(slideTo, now + duration);
+    }
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(vol, now + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
     osc.connect(gain);
     gain.connect(this.ctx.destination);
-    osc.start(this.ctx.currentTime + delay);
-    osc.stop(this.ctx.currentTime + delay + duration);
+    osc.start(now);
+    osc.stop(now + duration + 0.02);
   },
+  // صوت خلط وتوزيع الحروف (نقر متتابع سريع شبيه ببطاقات اللعبة)
   playShuffle() {
-    for (let i = 0; i < 14; i++) {
-      this.tone(300 + (i * 45), 'triangle', 0.08, i * 0.05, 0.2);
-    }
+    const notes = [440, 554.37, 659.25, 880, 587.33, 783.99, 987.77, 1046.5];
+    notes.forEach((f, i) => {
+      this.tone(f, 'triangle', 0.075, i * 0.055, 0.24, f * 1.06);
+    });
   },
+  // صوت اختيار حرف على اللوحة
   playSelect() {
-    this.tone(587.33, 'sine', 0.15, 0, 0.3);
-    this.tone(880, 'sine', 0.25, 0.1, 0.3);
+    this.tone(660, 'sine', 0.11, 0, 0.28, 880);
+    this.tone(990, 'triangle', 0.16, 0.07, 0.22);
   },
+  // صوت جرس المسابقة الحقيقي (رنة مزدوجة حادة وواضحة)
   playBuzz() {
-    this.tone(220, 'sawtooth', 0.35, 0, 0.45);
-    this.tone(330, 'square', 0.35, 0.04, 0.35);
-    this.tone(660, 'triangle', 0.25, 0.12, 0.35);
+    // الضربة الأولى للجرس
+    this.tone(1318.5, 'sine', 0.16, 0, 0.42, 1244.5);
+    this.tone(2637, 'triangle', 0.14, 0.01, 0.26);
+    // الضربة الثانية السريعة للجرس
+    this.tone(1396.9, 'sine', 0.24, 0.11, 0.45, 1318.5);
+    this.tone(2793.8, 'triangle', 0.2, 0.12, 0.28);
   },
+  // صوت الإجابة الصحيحة ومنح الخلية
   playCorrect() {
-    [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => this.tone(f, 'triangle', 0.25, i * 0.09, 0.35));
+    const chord = [523.25, 659.25, 783.99, 1046.5, 1318.5];
+    chord.forEach((f, i) => {
+      this.tone(f, 'triangle', 0.24, i * 0.075, 0.32);
+      this.tone(f * 1.5, 'sine', 0.16, i * 0.075 + 0.02, 0.14);
+    });
   },
+  // صوت الإجابة الخاطئة / انتهاء الوقت
   playWrong() {
-    this.tone(150, 'sawtooth', 0.5, 0, 0.35);
+    this.tone(240, 'sawtooth', 0.24, 0, 0.3, 175);
+    this.tone(175, 'sawtooth', 0.38, 0.2, 0.32, 115);
   },
+  // صوت الفوز بالمسار
   playWin() {
-    const notes = [523, 659, 783, 1046, 783, 1046];
-    notes.forEach((n, i) => this.tone(n, 'square', 0.3, i * 0.14, 0.3));
+    const fanfare = [
+      { f: 523.25, d: 0.14, t: 0 },
+      { f: 659.25, d: 0.14, t: 0.13 },
+      { f: 783.99, d: 0.14, t: 0.26 },
+      { f: 1046.5, d: 0.26, t: 0.39 },
+      { f: 783.99, d: 0.14, t: 0.66 },
+      { f: 1046.5, d: 0.45, t: 0.80 }
+    ];
+    fanfare.forEach((n) => {
+      this.tone(n.f, 'triangle', n.d, n.t, 0.34);
+      this.tone(n.f * 0.5, 'sine', n.d, n.t, 0.2);
+    });
   }
 };
 
@@ -399,7 +429,7 @@ const GameController = {
     this.timerInterval = setInterval(() => {
       if (state.timer > 0) {
         state.timer--;
-        if (state.timer <= 5 && state.timer > 0) AudioFX.tone(800, 'sine', 0.1, 0, 0.2);
+        if (state.timer <= 5 && state.timer > 0) AudioFX.tone(980, 'sine', 0.09, 0, 0.24);
         if (state.timer === 0) AudioFX.playWrong();
         saveState();
       } else {
@@ -669,6 +699,7 @@ function hexPointsSvg(cx, cy, r) {
   return pts.join(' ');
 }
 
+// النسخة المعتمدة للوحة مع خطوط واضحة حول كل خلية وضمان ظهور جميع الحروف
 function renderSvgHexBoard(containerId) {
   const container = document.getElementById(containerId);
   if (!container || !state.cells || state.cells.length === 0) return;
@@ -693,8 +724,8 @@ function renderSvgHexBoard(containerId) {
     allHexes.push({ type: 'border', color: '#077e36', cx, cy: startY - dy });
 
     const colCells = state.cells
-      .filter(c => c.col === specCol)
-      .sort((a, b) => a.row - b.row)
+      .filter(c => Number(c.col) === specCol)
+      .sort((a, b) => Number(a.row) - Number(b.row))
       .slice(0, rowsCount);
 
     colCells.forEach((cell, rIdx) => {
@@ -763,6 +794,9 @@ function renderSvgHexBoard(containerId) {
       const poly = document.createElementNS(svgNs, 'polygon');
       poly.setAttribute('points', hexPointsSvg(item.cx, item.cy, R));
       poly.setAttribute('fill', item.color);
+      poly.setAttribute('stroke', '#111827');
+      poly.setAttribute('stroke-width', '3.5');
+      poly.setAttribute('stroke-linejoin', 'round');
       poly.setAttribute('class', 'hex-poly');
       svg.appendChild(poly);
       return;
@@ -777,20 +811,36 @@ function renderSvgHexBoard(containerId) {
     g.setAttribute('class', cls);
 
     let fillColor = '#fffde3';
-    if (cell.owner === 'green') fillColor = '#16c75e';
-    else if (cell.owner === 'red') fillColor = '#ff3b47';
-    if (state.activeIndex === cell.index) fillColor = '#f5c542';
+    let strokeColor = '#1f2937';
+    let strokeWidth = '3.5';
+
+    if (cell.owner === 'green') {
+      fillColor = '#16c75e';
+      strokeColor = '#064e24';
+    } else if (cell.owner === 'red') {
+      fillColor = '#ff3b47';
+      strokeColor = '#7f1d1d';
+    }
+
+    if (state.activeIndex === cell.index) {
+      fillColor = '#f5c542';
+      strokeColor = '#ffffff';
+      strokeWidth = '4.5';
+    }
 
     const poly = document.createElementNS(svgNs, 'polygon');
     poly.setAttribute('points', hexPointsSvg(cx, cy, R));
     poly.setAttribute('fill', fillColor);
+    poly.setAttribute('stroke', strokeColor);
+    poly.setAttribute('stroke-width', strokeWidth);
+    poly.setAttribute('stroke-linejoin', 'round');
     poly.setAttribute('class', 'hex-poly');
 
     const text = document.createElementNS(svgNs, 'text');
     text.setAttribute('x', cx);
     text.setAttribute('y', cy + 2);
     text.setAttribute('class', 'hex-letter-text');
-    text.textContent = cell.letter;
+    text.textContent = cell.letter || '';
 
     g.appendChild(poly);
     g.appendChild(text);
