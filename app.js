@@ -86,28 +86,29 @@ const AudioFX = {
     osc.start(now);
     osc.stop(now + duration + 0.02);
   },
-  // صوت خلط وتوزيع الحروف (نقر متتابع سريع شبيه ببطاقات اللعبة)
   playShuffle() {
     const notes = [440, 554.37, 659.25, 880, 587.33, 783.99, 987.77, 1046.5];
     notes.forEach((f, i) => {
       this.tone(f, 'triangle', 0.075, i * 0.055, 0.24, f * 1.06);
     });
   },
-  // صوت اختيار حرف على اللوحة
   playSelect() {
     this.tone(660, 'sine', 0.11, 0, 0.28, 880);
     this.tone(990, 'triangle', 0.16, 0.07, 0.22);
   },
-  // صوت جرس المسابقة الحقيقي (رنة مزدوجة حادة وواضحة)
+  playGoldReveal() {
+    const sparkle = [783.99, 987.77, 1174.66, 1567.98, 2093.0];
+    sparkle.forEach((f, i) => {
+      this.tone(f, 'triangle', 0.22, i * 0.07, 0.34, f * 1.04);
+      this.tone(f * 0.5, 'sine', 0.2, i * 0.07, 0.16);
+    });
+  },
   playBuzz() {
-    // الضربة الأولى للجرس
     this.tone(1318.5, 'sine', 0.16, 0, 0.42, 1244.5);
     this.tone(2637, 'triangle', 0.14, 0.01, 0.26);
-    // الضربة الثانية السريعة للجرس
     this.tone(1396.9, 'sine', 0.24, 0.11, 0.45, 1318.5);
     this.tone(2793.8, 'triangle', 0.2, 0.12, 0.28);
   },
-  // صوت الإجابة الصحيحة ومنح الخلية
   playCorrect() {
     const chord = [523.25, 659.25, 783.99, 1046.5, 1318.5];
     chord.forEach((f, i) => {
@@ -115,12 +116,10 @@ const AudioFX = {
       this.tone(f * 1.5, 'sine', 0.16, i * 0.075 + 0.02, 0.14);
     });
   },
-  // صوت الإجابة الخاطئة / انتهاء الوقت
   playWrong() {
     this.tone(240, 'sawtooth', 0.24, 0, 0.3, 175);
     this.tone(175, 'sawtooth', 0.38, 0.2, 0.32, 115);
   },
-  // صوت الفوز بالمسار
   playWin() {
     const fanfare = [
       { f: 523.25, d: 0.14, t: 0 },
@@ -143,6 +142,7 @@ const AudioFX = {
 let currentRoom = '';
 let currentMode = 'setup';
 let lastBuzzCount = 0;
+let lastRevealedGoldIndex = null;
 
 const IMAGE_COLUMNS_SPEC = [
   { col: 0, count: 5 },
@@ -184,7 +184,20 @@ function normalizeState(rawObj) {
   merged.buzzQueue = Array.isArray(merged.buzzQueue) ? merged.buzzQueue : Object.values(merged.buzzQueue || {});
   merged.buzzQueue.sort((a, b) => a.ts - b.ts);
   merged.players = merged.players && typeof merged.players === 'object' ? merged.players : {};
-  merged.cells = Array.isArray(merged.cells) ? merged.cells : Object.values(merged.cells || {});
+  merged.cells = Array.isArray(merged.cells)
+    ? merged.cells
+    : Object.values(merged.cells || {});
+
+  merged.cells = merged.cells.map((c, idx) => ({
+    index: typeof c.index === 'number' ? c.index : idx,
+    col: Number(c.col),
+    row: Number(c.row),
+    letter: c.letter || 'أ',
+    owner: c.owner || null,
+    hasGoldBar: Boolean(c.hasGoldBar),
+    goldRevealed: Boolean(c.goldRevealed)
+  }));
+
   return merged;
 }
 
@@ -317,34 +330,50 @@ function launchMode(mode, forcedRoom = null) {
 }
 
 // ==========================================
-// 4. منطق اللعبة وخوارزمية الفوز (BFS)
+// 4. منطق اللعبة وخوارزمية الفوز (BFS) + السبيكة الذهبية
 // ==========================================
 const GameController = {
   timerInterval: null,
 
+  assignHiddenGoldBars(cells) {
+    // توزيع 3 إلى 4 سبائك ذهبية مخفية بشكل عشوائي على خلايا الحروف
+    const goldCount = Math.floor(Math.random() * 2) + 3;
+    const indices = cells.map((_, i) => i).sort(() => Math.random() - 0.5);
+    const chosen = new Set(indices.slice(0, goldCount));
+
+    return cells.map((cell, i) => ({
+      ...cell,
+      hasGoldBar: chosen.has(i),
+      goldRevealed: false
+    }));
+  },
+
   initBoard(playSound = true) {
     const shuffled = [...ARABIC_LETTERS].sort(() => Math.random() - 0.5).slice(0, TOTAL_LETTER_CELLS);
-    const cells = [];
+    const rawCells = [];
     let poolIdx = 0;
 
     IMAGE_COLUMNS_SPEC.forEach((colSpec) => {
       for (let r = 0; r < colSpec.count; r++) {
-        const index = cells.length;
-        cells.push({
+        const index = rawCells.length;
+        rawCells.push({
           index,
           col: colSpec.col,
           row: r,
           letter: shuffled[poolIdx++] || 'أ',
-          owner: null
+          owner: null,
+          hasGoldBar: false,
+          goldRevealed: false
         });
       }
     });
 
-    state.cells = cells;
+    state.cells = this.assignHiddenGoldBars(rawCells);
     state.activeIndex = null;
     state.buzzQueue = [];
     state.buzzerLocked = false;
     lastBuzzCount = 0;
+    lastRevealedGoldIndex = null;
     if (playSound) AudioFX.playShuffle();
     saveState();
   },
@@ -355,14 +384,37 @@ const GameController = {
     this.initBoard(true);
   },
 
+  pickRandomLetter() {
+    const availableCells = state.cells.filter(c => !c.owner);
+    const pool = availableCells.length > 0 ? availableCells : state.cells;
+    if (!pool.length) return;
+
+    const randomCell = pool[Math.floor(Math.random() * pool.length)];
+    this.selectCell(randomCell.index);
+  },
+
   selectCell(index) {
-    if (!state.cells[index]) return;
+    const cell = state.cells[index];
+    if (!cell) return;
+
     state.activeIndex = index;
     state.questionIndex = 0;
     state.buzzQueue = [];
     state.buzzerLocked = false;
     lastBuzzCount = 0;
-    AudioFX.playSelect();
+
+    let revealedNow = false;
+    if (cell.hasGoldBar && !cell.goldRevealed) {
+      cell.goldRevealed = true;
+      revealedNow = true;
+    }
+
+    if (revealedNow) {
+      AudioFX.playGoldReveal();
+    } else {
+      AudioFX.playSelect();
+    }
+
     saveState();
   },
 
@@ -378,7 +430,12 @@ const GameController = {
 
   awardCell(team) {
     if (state.activeIndex === null || !state.cells[state.activeIndex]) return;
-    state.cells[state.activeIndex].owner = team;
+    const targetCell = state.cells[state.activeIndex];
+    targetCell.owner = team;
+    if (targetCell.hasGoldBar) {
+      targetCell.goldRevealed = true;
+    }
+
     state.activeIndex = null;
     state.buzzQueue = [];
     state.buzzerLocked = false;
@@ -573,6 +630,10 @@ function renderAll() {
   renderSvgHexBoard('hostMiniGrid');
 
   const activeCell = state.activeIndex !== null ? state.cells[state.activeIndex] : null;
+  const goldShowcase = document.getElementById('goldBarShowcase');
+  const goldShowcaseLetter = document.getElementById('goldShowcaseLetter');
+  const hostGoldAlert = document.getElementById('hostGoldAlert');
+
   if (activeCell && activeCell.letter) {
     const qList = QUESTIONS_DB[activeCell.letter] || [{ q: 'سؤال حر من المقدم', a: '---' }];
     const currentQ = qList[state.questionIndex % qList.length];
@@ -580,10 +641,27 @@ function renderAll() {
     document.getElementById('hostSelectedLetter').textContent = activeCell.letter;
     document.getElementById('hostQuestionText').textContent = currentQ.q;
     document.getElementById('hostAnswerText').textContent = currentQ.a;
+
+    if (activeCell.hasGoldBar && activeCell.goldRevealed) {
+      if (goldShowcase) {
+        goldShowcase.classList.remove('hidden');
+        if (goldShowcaseLetter) goldShowcaseLetter.textContent = activeCell.letter;
+      }
+      if (hostGoldAlert) hostGoldAlert.classList.remove('hidden');
+      if (lastRevealedGoldIndex !== activeCell.index && currentMode !== 'player') {
+        lastRevealedGoldIndex = activeCell.index;
+        AudioFX.playGoldReveal();
+      }
+    } else {
+      if (goldShowcase) goldShowcase.classList.add('hidden');
+      if (hostGoldAlert) hostGoldAlert.classList.add('hidden');
+    }
   } else {
     document.getElementById('hostSelectedLetter').textContent = '-';
     document.getElementById('hostQuestionText').textContent = 'اختر حرفاً من اللوحة لعرض السؤال';
     document.getElementById('hostAnswerText').textContent = '---';
+    if (goldShowcase) goldShowcase.classList.add('hidden');
+    if (hostGoldAlert) hostGoldAlert.classList.add('hidden');
   }
 
   const banner = document.getElementById('boardBuzzBanner');
@@ -699,7 +777,7 @@ function hexPointsSvg(cx, cy, r) {
   return pts.join(' ');
 }
 
-// النسخة المعتمدة للوحة مع خطوط واضحة حول كل خلية وضمان ظهور جميع الحروف
+// رسم اللوحة بنمط 3D مع خطوط واضحة وإظهار السبيكة الذهبية فقط عند كشفها
 function renderSvgHexBoard(containerId) {
   const container = document.getElementById(containerId);
   if (!container || !state.cells || state.cells.length === 0) return;
@@ -781,6 +859,40 @@ function renderSvgHexBoard(containerId) {
   const svg = document.createElementNS(svgNs, 'svg');
   svg.setAttribute('viewBox', '0 0 840 720');
 
+  // تعريف تدرجات وإضاءات 3D
+  const defs = document.createElementNS(svgNs, 'defs');
+
+  const createGrad = (id, topColor, bottomColor) => {
+    const grad = document.createElementNS(svgNs, 'linearGradient');
+    grad.setAttribute('id', `${id}_${containerId}`);
+    grad.setAttribute('x1', '0%');
+    grad.setAttribute('y1', '0%');
+    grad.setAttribute('x2', '0%');
+    grad.setAttribute('y2', '100%');
+
+    const s1 = document.createElementNS(svgNs, 'stop');
+    s1.setAttribute('offset', '0%');
+    s1.setAttribute('stop-color', topColor);
+
+    const s2 = document.createElementNS(svgNs, 'stop');
+    s2.setAttribute('offset', '100%');
+    s2.setAttribute('stop-color', bottomColor);
+
+    grad.appendChild(s1);
+    grad.appendChild(s2);
+    defs.appendChild(grad);
+  };
+
+  createGrad('gradDefault', '#ffffff', '#e8e0b5');
+  createGrad('gradGreen', '#22e572', '#09873d');
+  createGrad('gradRed', '#ff5964', '#b81420');
+  createGrad('gradActive', '#fef08a', '#d97706');
+  createGrad('gradGoldRevealed', '#fde047', '#ca8a04');
+  createGrad('gradBorderGreen', '#12a84c', '#045724');
+  createGrad('gradBorderRed', '#e02430', '#8f0d15');
+
+  svg.appendChild(defs);
+
   const bgRect = document.createElementNS(svgNs, 'rect');
   bgRect.setAttribute('x', '0');
   bgRect.setAttribute('y', '0');
@@ -791,9 +903,13 @@ function renderSvgHexBoard(containerId) {
 
   allHexes.forEach((item) => {
     if (item.type === 'border') {
+      const gradRef = item.color === '#077e36'
+        ? `url(#gradBorderGreen_${containerId})`
+        : `url(#gradBorderRed_${containerId})`;
+
       const poly = document.createElementNS(svgNs, 'polygon');
       poly.setAttribute('points', hexPointsSvg(item.cx, item.cy, R));
-      poly.setAttribute('fill', item.color);
+      poly.setAttribute('fill', gradRef);
       poly.setAttribute('stroke', '#111827');
       poly.setAttribute('stroke-width', '3.5');
       poly.setAttribute('stroke-linejoin', 'round');
@@ -803,47 +919,79 @@ function renderSvgHexBoard(containerId) {
     }
 
     const { cell, cx, cy } = item;
+    const showGold = Boolean(cell.hasGoldBar && cell.goldRevealed);
+
     const g = document.createElementNS(svgNs, 'g');
     let cls = 'hex-letter-cell';
     if (cell.owner === 'green') cls += ' owned-green';
     else if (cell.owner === 'red') cls += ' owned-red';
     if (state.activeIndex === cell.index) cls += ' active-cell';
+    if (showGold) cls += ' revealed-gold';
     g.setAttribute('class', cls);
 
-    let fillColor = '#fffde3';
+    let fillRef = `url(#gradDefault_${containerId})`;
     let strokeColor = '#1f2937';
     let strokeWidth = '3.5';
 
     if (cell.owner === 'green') {
-      fillColor = '#16c75e';
-      strokeColor = '#064e24';
+      fillRef = `url(#gradGreen_${containerId})`;
+      strokeColor = '#053b1b';
     } else if (cell.owner === 'red') {
-      fillColor = '#ff3b47';
-      strokeColor = '#7f1d1d';
+      fillRef = `url(#gradRed_${containerId})`;
+      strokeColor = '#5e0a10';
+    }
+
+    if (showGold) {
+      fillRef = `url(#gradGoldRevealed_${containerId})`;
+      strokeColor = '#fef9c3';
+      strokeWidth = '4.2';
     }
 
     if (state.activeIndex === cell.index) {
-      fillColor = '#f5c542';
+      fillRef = `url(#gradActive_${containerId})`;
       strokeColor = '#ffffff';
       strokeWidth = '4.5';
     }
 
     const poly = document.createElementNS(svgNs, 'polygon');
     poly.setAttribute('points', hexPointsSvg(cx, cy, R));
-    poly.setAttribute('fill', fillColor);
+    poly.setAttribute('fill', fillRef);
     poly.setAttribute('stroke', strokeColor);
     poly.setAttribute('stroke-width', strokeWidth);
     poly.setAttribute('stroke-linejoin', 'round');
     poly.setAttribute('class', 'hex-poly');
 
+    // لمعة علوية خفيفة لإبراز العمق ثلاثي الأبعاد
+    const shinePoly = document.createElementNS(svgNs, 'polygon');
+    shinePoly.setAttribute('points', hexPointsSvg(cx, cy - 2, R * 0.84));
+    shinePoly.setAttribute('fill', 'none');
+    shinePoly.setAttribute('stroke', 'rgba(255,255,255,0.42)');
+    shinePoly.setAttribute('stroke-width', '1.5');
+    shinePoly.setAttribute('pointer-events', 'none');
+
     const text = document.createElementNS(svgNs, 'text');
     text.setAttribute('x', cx);
-    text.setAttribute('y', cy + 2);
+    text.setAttribute('y', showGold ? cy - 8 : cy + 2);
     text.setAttribute('class', 'hex-letter-text');
     text.textContent = cell.letter || '';
 
     g.appendChild(poly);
+    g.appendChild(shinePoly);
     g.appendChild(text);
+
+    // أيقونة السبيكة الذهبية تظهر فقط بعد كشف الحرف
+    if (showGold) {
+      const goldIcon = document.createElementNS(svgNs, 'text');
+      goldIcon.setAttribute('x', cx);
+      goldIcon.setAttribute('y', cy + 22);
+      goldIcon.setAttribute('text-anchor', 'middle');
+      goldIcon.setAttribute('dominant-baseline', 'central');
+      goldIcon.setAttribute('font-size', '18');
+      goldIcon.setAttribute('pointer-events', 'none');
+      goldIcon.textContent = '🏅';
+      g.appendChild(goldIcon);
+    }
+
     g.addEventListener('click', () => GameController.selectCell(cell.index));
     svg.appendChild(g);
   });
