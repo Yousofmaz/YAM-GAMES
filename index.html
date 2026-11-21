@@ -48,7 +48,7 @@
 
       <div class="board-center-info">
         <div class="room-pill">غرفة: <strong id="boardRoomLabel">----</strong></div>
-        <div class="timer-pill">⏱️ <strong id="boardTimer">15</strong></div>
+        <div class="timer-pill featured-board-timer">⏱️ <strong id="boardTimer">15</strong></div>
         <button type="button" class="btn qr-mini-btn" onclick="openQRModal()">📱 QR الجرس</button>
         <button type="button" class="btn secondary-mini-btn" onclick="openBoardWindow()">↗ نافذة جديدة</button>
       </div>
@@ -67,6 +67,31 @@
       <span>⚡ الأسرع:</span>
       <strong id="boardBuzzName">---</strong>
       <span id="boardBuzzDetails">---</span>
+    </div>
+
+    <!-- عرض السؤال والمؤقت والإجابة المميزة على اللوحة عند إظهارها من المقدم -->
+    <div id="boardStageShowcase" class="board-stage-showcase hidden">
+      <div class="stage-top-row">
+        <div class="stage-letter-badge">
+          <span>الحرف</span>
+          <strong id="boardStageLetter">-</strong>
+        </div>
+        <div class="stage-timer-box">
+          <span>الوقت المتبقي</span>
+          <strong id="boardStageTimer">15</strong>
+          <small>ثانية</small>
+        </div>
+      </div>
+
+      <div class="stage-question-card">
+        <span class="stage-label">السؤال</span>
+        <p id="boardStageQuestion">---</p>
+      </div>
+
+      <div id="boardStageAnswerBox" class="stage-answer-card hidden">
+        <span class="stage-answer-label">✅ الإجابة</span>
+        <strong id="boardStageAnswer">---</strong>
+      </div>
     </div>
 
     <!-- عرض السبيكة الذهبية الخرافي عند اكتشافها -->
@@ -107,13 +132,28 @@
 
     <div class="host-layout">
       <div class="host-panel">
+        <!-- أزرار التحكم الافتتاحية والصوتية المطلوبة -->
+        <div class="host-launch-bar">
+          <button type="button" id="startBoardBtn" class="btn board-btn" onclick="GameController.startBoard()">
+            🚀 بدء لوحة
+          </button>
+          <button type="button" id="startGameSoundBtn" class="btn host-btn" onclick="GameController.playStartGameSound()">
+            🔊 صوت بدء اللعبة
+          </button>
+        </div>
+
         <h3>الحرف والسؤال الحالي</h3>
         <div class="selected-letter-row">
           <div class="selected-letter-box">
             <span>الحرف المحدد:</span>
             <strong id="hostSelectedLetter">-</strong>
           </div>
-          <button type="button" class="btn gold-pick-btn" onclick="GameController.pickRandomLetter()">🎲 اختيار حرف عشوائي</button>
+          <div class="letter-side-actions">
+            <button type="button" class="btn gold-pick-btn" onclick="GameController.pickRandomLetter()">🎲 اختيار حرف عشوائي</button>
+            <button type="button" id="revealLetterBtn" class="btn reveal-letter-btn" onclick="GameController.revealLetterOnBoard()">
+              📢 إظهار الحرف على اللوحة
+            </button>
+          </div>
         </div>
 
         <div id="hostGoldAlert" class="host-gold-alert hidden">
@@ -124,6 +164,9 @@
         <div class="answer-box">الإجابة: <strong id="hostAnswerText">---</strong></div>
 
         <div class="host-actions">
+          <button type="button" id="revealAnswerBtn" class="btn reveal-answer-btn" onclick="GameController.revealAnswerOnBoard()">
+            👁️ إظهار الإجابة
+          </button>
           <button type="button" class="btn" onclick="GameController.nextQuestion()">🔄 سؤال آخر</button>
           <button type="button" class="btn" onclick="GameController.replaceLetter()">🔀 تغيير الحرف</button>
           <button type="button" class="btn green-btn" onclick="GameController.awardCell('green')">منح للأخضر 🟢</button>
@@ -138,6 +181,26 @@
           <button type="button" class="btn secondary-btn" onclick="GameController.resetTimer()">↺ إعادة 15ث</button>
           <button type="button" class="btn secondary-btn" onclick="GameController.newRound()">🎲 جولة جديدة</button>
           <button type="button" class="btn qr-mini-btn" onclick="openQRModal()">📱 رابط / QR اللاعبين</button>
+        </div>
+
+        <!-- تخصيص ملفات الأصوات الثلاثة من جهازك -->
+        <div class="custom-audio-box">
+          <h4>🎵 ربط ملفات الأصوات الثلاثة (اختياري)</h4>
+          <p class="muted">اربط ملفات الصوت الخاصة بك لتشغيلها مباشرة عند الضغط على الأزرار والحروف</p>
+          <div class="audio-upload-grid">
+            <label class="audio-upload-item">
+              <span>صوت "بدء لوحة" (7ث)</span>
+              <input type="file" accept="audio/*" onchange="AudioFX.setCustomFile('startBoard', this)" />
+            </label>
+            <label class="audio-upload-item">
+              <span>صوت "بدء اللعبة" (2ث)</span>
+              <input type="file" accept="audio/*" onchange="AudioFX.setCustomFile('startGame', this)" />
+            </label>
+            <label class="audio-upload-item">
+              <span>صوت ضغط الحرف (1ث)</span>
+              <input type="file" accept="audio/*" onchange="AudioFX.setCustomFile('letterClick', this)" />
+            </label>
+          </div>
         </div>
       </div>
 
