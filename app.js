@@ -56,10 +56,13 @@ function getAccurateNow() {
 }
 
 // ==========================================
-// 1. محرك المؤثرات الصوتية + دعم ملفات الصوت المرفوعة
+// 1. محرك المؤثرات الصوتية + دعم ملفات الصوت المرفوعة من الاستضافة
 // ==========================================
 const AudioFX = {
   ctx: null,
+  unlocked: false,
+  activeAudios: {},
+  preloadedAudios: {},
   customFiles: {
     startBoard: null,
     startGame: null,
@@ -75,7 +78,35 @@ const AudioFX = {
       this.ctx = new (window.AudioContext || window.webkitAudioContext)();
     }
     if (this.ctx.state === 'suspended') {
-      this.ctx.resume();
+      this.ctx.resume().catch(() => {});
+    }
+    this.preloadHostedFiles();
+  },
+  preloadHostedFiles() {
+    Object.entries(this.defaultPaths).forEach(([key, path]) => {
+      if (!this.preloadedAudios[key] && path) {
+        const el = new Audio(path);
+        el.preload = 'auto';
+        this.preloadedAudios[key] = el;
+      }
+    });
+  },
+  unlockOnInteraction() {
+    if (this.unlocked) return;
+    this.unlocked = true;
+    this.init();
+
+    const firstSrc = this.customFiles.letterClick || this.defaultPaths.letterClick;
+    if (firstSrc) {
+      const probe = new Audio(firstSrc);
+      probe.muted = true;
+      const p = probe.play();
+      if (p && typeof p.then === 'function') {
+        p.then(() => {
+          probe.pause();
+          probe.currentTime = 0;
+        }).catch(() => {});
+      }
     }
   },
   setCustomFile(key, inputEl) {
@@ -87,14 +118,26 @@ const AudioFX = {
     this.customFiles[key] = URL.createObjectURL(file);
   },
   tryPlayFile(key, fallbackFn) {
+    this.init();
     const src = this.customFiles[key] || this.defaultPaths[key];
     if (!src) {
-      fallbackFn();
+      if (typeof fallbackFn === 'function') fallbackFn();
       return;
     }
+
+    if (this.activeAudios[key]) {
+      try {
+        this.activeAudios[key].pause();
+        this.activeAudios[key].currentTime = 0;
+      } catch (_) {}
+    }
+
     const audio = new Audio(src);
+    audio.preload = 'auto';
+    this.activeAudios[key] = audio;
+
     audio.play().catch(() => {
-      fallbackFn();
+      if (typeof fallbackFn === 'function') fallbackFn();
     });
   },
   tone(freq, type, duration, delay = 0, vol = 0.25) {
@@ -304,6 +347,10 @@ window.addEventListener('storage', (e) => {
 // 3. تهيئة الروابط والأوضاع + زر الرجوع
 // ==========================================
 window.addEventListener('DOMContentLoaded', () => {
+  AudioFX.preloadHostedFiles();
+  window.addEventListener('pointerdown', () => AudioFX.unlockOnInteraction(), { once: true });
+  window.addEventListener('keydown', () => AudioFX.unlockOnInteraction(), { once: true });
+
   const params = new URLSearchParams(window.location.search);
   const modeParam = params.get('mode');
   const roomParam = params.get('room');
