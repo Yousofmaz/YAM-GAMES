@@ -183,13 +183,11 @@ function triggerGoldBarScreenAnimation(letter = '') {
 }
 
 // ==========================================
-// 1. محرك المؤثرات الصوتية + دعم ملفات الصوت المرفوعة من الاستضافة
+// 1. محرك المؤثرات الصوتية المعزول (يعتمد على الصوت المضاف فقط بدون أصوات بديلة غريبة)
 // ==========================================
 const AudioFX = {
-  ctx: null,
   unlocked: false,
-  activeAudios: {},
-  preloadedAudios: {},
+  playingList: [],
   customFiles: {
     startBoard: null,
     startGame: null,
@@ -201,29 +199,16 @@ const AudioFX = {
     letterClick: './sounds/letter-click.mp3'
   },
   init() {
-    try {
-      if (!this.ctx) {
-        const AudioCtx = window.AudioContext || window.webkitAudioContext;
-        if (AudioCtx) {
-          this.ctx = new AudioCtx();
-        }
-      }
-      if (this.ctx && this.ctx.state === 'suspended') {
-        this.ctx.resume().catch(() => {});
-      }
-    } catch (_) {}
-    this.preloadHostedFiles();
+    this.syncUnlockUI();
   },
   preloadHostedFiles() {
-    Object.entries(this.defaultPaths).forEach(([key, path]) => {
-      if (!this.preloadedAudios[key] && path) {
-        const el = new Audio(path);
-        el.preload = 'auto';
-        this.preloadedAudios[key] = el;
-      }
+    Object.values(this.defaultPaths).forEach((path) => {
+      if (!path) return;
+      const el = new Audio(path);
+      el.preload = 'auto';
     });
   },
-  updateBoardUnlockBtn() {
+  syncUnlockUI() {
     const btn = document.getElementById('boardAudioUnlockBtn');
     if (btn && currentMode === 'board') {
       btn.textContent = this.unlocked ? '🔊 الصوت مفعّل' : '🔇 اضغط لتفعيل الصوت';
@@ -231,8 +216,7 @@ const AudioFX = {
   },
   unlockOnInteraction() {
     this.unlocked = true;
-    this.init();
-    this.updateBoardUnlockBtn();
+    this.syncUnlockUI();
   },
   setCustomFile(key, inputEl) {
     const file = inputEl && inputEl.files && inputEl.files[0];
@@ -241,119 +225,80 @@ const AudioFX = {
       URL.revokeObjectURL(this.customFiles[key]);
     }
     this.customFiles[key] = URL.createObjectURL(file);
-    if (this.preloadedAudios[key]) {
-      this.preloadedAudios[key].src = this.customFiles[key];
-      this.preloadedAudios[key].load();
-    }
   },
-  stopAllManagedAudios() {
-    Object.values(this.activeAudios).forEach((el) => {
-      if (!el) return;
+  stopAllSounds() {
+    while (this.playingList.length > 0) {
+      const item = this.playingList.pop();
+      if (!item) continue;
       try {
-        el.pause();
-        el.currentTime = 0;
+        item.pause();
+        item.currentTime = 0;
+        item.src = '';
       } catch (_) {}
-    });
+    }
   },
-  tryPlayFile(key, fallbackFn) {
-    this.init();
+  playHostedSound(key) {
     const src = this.customFiles[key] || this.defaultPaths[key];
-    if (!src) {
-      if (typeof fallbackFn === 'function') fallbackFn();
-      return;
-    }
+    if (!src) return;
 
-    this.stopAllManagedAudios();
+    this.stopAllSounds();
 
-    let audio = this.preloadedAudios[key];
-    if (!audio || audio.src !== new URL(src, window.location.href).href) {
-      audio = new Audio(src);
-      audio.preload = 'auto';
-      this.preloadedAudios[key] = audio;
-    }
+    const snd = new Audio(src);
+    snd.preload = 'auto';
+    snd.muted = false;
+    snd.volume = 1;
+    this.playingList.push(snd);
 
-    this.activeAudios[key] = audio;
-    audio.muted = false;
-    audio.volume = 1;
-    audio.currentTime = 0;
+    const cleanup = () => {
+      const idx = this.playingList.indexOf(snd);
+      if (idx !== -1) this.playingList.splice(idx, 1);
+    };
+    snd.addEventListener('ended', cleanup, { once: true });
+    snd.addEventListener('error', cleanup, { once: true });
 
-    const playPromise = audio.play();
-    if (playPromise && typeof playPromise.then === 'function') {
-      playPromise.then(() => {
+    const promise = snd.play();
+    if (promise && typeof promise.then === 'function') {
+      promise.then(() => {
         this.unlocked = true;
-        this.updateBoardUnlockBtn();
+        this.syncUnlockUI();
       }).catch((err) => {
-        console.warn('Audio file playback issue for', key, src, err);
-        if (!this.unlocked) {
-          this.updateBoardUnlockBtn();
-        }
+        console.warn('[AudioFX] Play error:', key, src, err);
+        cleanup();
       });
     }
   },
-  tone(freq, type, duration, delay = 0, vol = 0.25) {
-    if (!this.ctx) return;
-    try {
-      if (this.ctx.state === 'suspended') {
-        this.ctx.resume().catch(() => {});
-      }
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = type;
-      osc.frequency.setValueAtTime(freq, this.ctx.currentTime + delay);
-      gain.gain.setValueAtTime(vol, this.ctx.currentTime + delay);
-      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + delay + duration);
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-      osc.start(this.ctx.currentTime + delay);
-      osc.stop(this.ctx.currentTime + delay + duration);
-    } catch (_) {}
+  tone() {
+    // معطّل عمداً حتى لا يظهر صوت نغمات غريب عند الضغط المتكرر
   },
-  // مقطع 1 (~7 ثوانٍ): بدء لوحة
   playStartBoard() {
-    this.tryPlayFile('startBoard', () => {
-      const notes = [392.0, 440.0, 523.25, 659.25, 783.99, 659.25, 523.25, 587.33, 783.99, 1046.5];
-      notes.forEach((f, i) => {
-        this.tone(f, i % 2 === 0 ? 'triangle' : 'square', 0.28, i * 0.55, 0.2);
-      });
-    });
+    this.playHostedSound('startBoard');
   },
-  // مقطع 2 (~2 ثانية): صوت بدء اللعبة
   playStartGame() {
-    this.tryPlayFile('startGame', () => {
-      const seq = [523.25, 659.25, 783.99, 1046.5, 1318.5];
-      seq.forEach((f, i) => {
-        this.tone(f, 'square', 0.16, i * 0.22, 0.22);
-      });
-    });
+    this.playHostedSound('startGame');
   },
-  // مقطع 3 (~1 ثانية): صوت ضغط المقدم على حرف
   playLetterClick() {
-    this.tryPlayFile('letterClick', () => {
-      this.tone(880, 'square', 0.08, 0, 0.22);
-      this.tone(1174.66, 'triangle', 0.14, 0.06, 0.24);
-    });
+    this.playHostedSound('letterClick');
   },
   playShuffle() {
-    this.playStartBoard();
+    this.playHostedSound('startBoard');
   },
   playSelect() {
-    this.playLetterClick();
+    this.playHostedSound('letterClick');
   },
   playBuzz() {
-    this.tone(195, 'sawtooth', 0.32, 0, 0.35);
-    this.tone(260, 'square', 0.28, 0.05, 0.25);
+    this.playHostedSound('startGame');
   },
   playCorrect() {
-    this.playStartGame();
+    this.playHostedSound('startGame');
   },
   playWrong() {
-    this.tone(140, 'sawtooth', 0.45, 0, 0.3);
+    this.playHostedSound('letterClick');
   },
   playWin() {
-    this.playStartGame();
+    this.playHostedSound('startGame');
   },
   playGoldReveal() {
-    this.playStartGame();
+    this.playHostedSound('startGame');
   }
 };
 
@@ -567,8 +512,12 @@ window.addEventListener('storage', (e) => {
 window.addEventListener('DOMContentLoaded', () => {
   injectGoldSpinAnimationStyles();
   AudioFX.preloadHostedFiles();
-  window.addEventListener('pointerdown', () => AudioFX.unlockOnInteraction(), { once: true });
-  window.addEventListener('keydown', () => AudioFX.unlockOnInteraction(), { once: true });
+
+  const markUnlocked = () => {
+    AudioFX.unlockOnInteraction();
+  };
+  document.addEventListener('pointerdown', markUnlocked, true);
+  document.addEventListener('keydown', markUnlocked, true);
 
   const params = new URLSearchParams(window.location.search);
   const modeParam = params.get('mode');
@@ -630,7 +579,7 @@ function launchMode(mode, forcedRoom = null) {
   if (mode === 'board') {
     document.getElementById('boardScreen').classList.add('active');
     document.getElementById('boardRoomLabel').textContent = currentRoom;
-    AudioFX.updateBoardUnlockBtn();
+    AudioFX.syncUnlockUI();
   } else if (mode === 'host') {
     document.getElementById('hostScreen').classList.add('active');
     document.getElementById('hostRoomLabel').textContent = currentRoom;
@@ -697,7 +646,6 @@ const GameController = {
     saveState();
   },
 
-  // زر "بدء لوحة" في لوحة المقدم + تشغيل وبث صوت المقطع الأول (7 ثوانٍ)
   startBoard() {
     state.boardStarted = true;
     if (!state.cells || state.cells.length !== TOTAL_LETTER_CELLS) {
@@ -707,7 +655,6 @@ const GameController = {
     saveState();
   },
 
-  // زر "صوت بدء اللعبة" في لوحة المقدم + تشغيل وبث صوت المقطع الثاني (ثانيتين)
   playStartGameSound() {
     broadcastRoomSound('startGame');
   },
@@ -748,7 +695,6 @@ const GameController = {
     saveState();
   },
 
-  // زر "إظهار الحرف على اللوحة" -> يظهر الحرف والسؤال والمؤقت على اللوحة
   revealLetterOnBoard() {
     if (state.activeIndex === null || !state.cells[state.activeIndex]) {
       alert('اختر حرفاً أولاً ليظهر على اللوحة');
@@ -760,7 +706,6 @@ const GameController = {
     saveState();
   },
 
-  // زر "إظهار الإجابة" -> يظهر الإجابة أمام اللاعبين على اللوحة
   revealAnswerOnBoard() {
     if (state.activeIndex === null || !state.cells[state.activeIndex]) {
       alert('اختر حرفاً أولاً لإظهار إجابته');
@@ -843,7 +788,6 @@ const GameController = {
     this.timerInterval = setInterval(() => {
       if (state.timer > 0) {
         state.timer--;
-        if (state.timer <= 5 && state.timer > 0) AudioFX.tone(800, 'sine', 0.1, 0, 0.2);
         if (state.timer === 0) AudioFX.playWrong();
         saveState();
       } else {
@@ -976,6 +920,7 @@ const PlayerClient = {
 // ==========================================
 function renderAll() {
   injectGoldSpinAnimationStyles();
+  AudioFX.syncUnlockUI();
 
   document.getElementById('boardGreenScore').textContent = state.greenScore;
   document.getElementById('boardRedScore').textContent = state.redScore;
@@ -1042,7 +987,7 @@ function renderAll() {
         goldShowcase.classList.remove('hidden');
         if (goldShowcaseLetter) goldShowcaseLetter.textContent = activeCell.letter;
         const ingotEl = goldShowcase.querySelector('.gold-ingot-3d');
-        if (ingotEl) {
+        if (ingotEl && lastAnimatedGoldIndex !== activeCell.index) {
           ingotEl.classList.remove('gold-spin-active');
           void ingotEl.offsetWidth;
           ingotEl.classList.add('gold-spin-active');
