@@ -99,17 +99,17 @@ function injectGoldSpinAnimationStyles() {
         opacity: 0;
         transform: translate(-50%, -50%) scale(0.2) rotate(-35deg);
       }
-      25% {
+      22% {
         opacity: 1;
         transform: translate(-50%, -50%) scale(1.25) rotate(180deg);
       }
-      65% {
+      68% {
         opacity: 1;
-        transform: translate(-50%, -50%) scale(1.1) rotate(540deg);
+        transform: translate(-50%, -50%) scale(1.12) rotate(540deg);
       }
       100% {
         opacity: 0;
-        transform: translate(-50%, -50%) scale(0.7) rotate(720deg);
+        transform: translate(-50%, -50%) scale(0.75) rotate(720deg);
       }
     }
 
@@ -129,33 +129,33 @@ function injectGoldSpinAnimationStyles() {
       position: fixed;
       top: 50%;
       left: 50%;
-      z-index: 9999;
+      z-index: 99999;
       pointer-events: none;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 10px;
-      padding: 24px 34px;
-      border-radius: 24px;
-      background: radial-gradient(circle, rgba(250, 204, 21, 0.28) 0%, rgba(15, 23, 42, 0.88) 75%);
-      border: 2px solid rgba(253, 224, 71, 0.85);
-      box-shadow: 0 0 45px rgba(234, 179, 8, 0.65);
-      animation: goldScreenOverlayAnim 2.2s ease-in-out forwards;
+      gap: 12px;
+      padding: 28px 38px;
+      border-radius: 26px;
+      background: radial-gradient(circle, rgba(250, 204, 21, 0.35) 0%, rgba(15, 23, 42, 0.92) 78%);
+      border: 2.5px solid rgba(253, 224, 71, 0.95);
+      box-shadow: 0 0 50px rgba(234, 179, 8, 0.75);
+      animation: goldScreenOverlayAnim 2.4s ease-in-out forwards;
     }
 
     .gold-screen-spinner .gold-bar-icon {
-      font-size: 84px;
+      font-size: 92px;
       line-height: 1;
       animation: goldContinuousSpin 1.1s linear infinite;
-      filter: drop-shadow(0 0 22px rgba(253, 224, 71, 0.95));
+      filter: drop-shadow(0 0 24px rgba(253, 224, 71, 0.95));
     }
 
     .gold-screen-spinner .gold-bar-label {
       color: #fef08a;
-      font-size: 22px;
+      font-size: 24px;
       font-weight: 800;
-      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.85);
     }
   `;
   document.head.appendChild(style);
@@ -179,7 +179,7 @@ function triggerGoldBarScreenAnimation(letter = '') {
     if (overlay && overlay.parentNode) {
       overlay.remove();
     }
-  }, 2250);
+  }, 2450);
 }
 
 // ==========================================
@@ -401,6 +401,22 @@ let state = {
 
 const STORAGE_KEY = () => `horoof_room_${currentRoom}`;
 
+function enforceSingleGoldBar(cells) {
+  if (!Array.isArray(cells) || cells.length === 0) return cells;
+  const goldCells = cells.filter(c => c && c.hasGoldBar);
+  if (goldCells.length === 1) return cells;
+
+  const chosenIdx = goldCells.length > 1
+    ? goldCells[0].index
+    : Math.floor(Math.random() * cells.length);
+
+  return cells.map((c, idx) => ({
+    ...c,
+    hasGoldBar: idx === chosenIdx,
+    goldRevealed: idx === chosenIdx ? Boolean(c.goldRevealed) : false
+  }));
+}
+
 function normalizeState(rawObj) {
   const base = {
     cells: [],
@@ -438,6 +454,8 @@ function normalizeState(rawObj) {
     hasGoldBar: Boolean(c.hasGoldBar),
     goldRevealed: Boolean(c.goldRevealed)
   }));
+
+  merged.cells = enforceSingleGoldBar(merged.cells);
 
   return merged;
 }
@@ -1023,7 +1041,7 @@ function renderAll() {
         goldShowcase.classList.remove('hidden');
         if (goldShowcaseLetter) goldShowcaseLetter.textContent = activeCell.letter;
         const ingotEl = goldShowcase.querySelector('.gold-ingot-3d');
-        if (ingotEl && lastAnimatedGoldIndex !== activeCell.index) {
+        if (ingotEl) {
           ingotEl.classList.remove('gold-spin-active');
           void ingotEl.offsetWidth;
           ingotEl.classList.add('gold-spin-active');
