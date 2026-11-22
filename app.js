@@ -443,6 +443,22 @@ function handleIncomingRoomSound(incoming) {
   playSoundByType(incoming.soundEvent.type);
 }
 
+function syncBuzzerStateDirect() {
+  state.buzzQueue = Array.isArray(state.buzzQueue) ? state.buzzQueue : [];
+  state.buzzQueue.sort((a, b) => a.ts - b.ts);
+  state.buzzerLocked = Boolean(state.buzzerLocked);
+
+  if (currentRoom) {
+    localStorage.setItem(STORAGE_KEY(), JSON.stringify(state));
+    if (isCloudConnected) {
+      const roomPath = `horoof_rooms/${currentRoom}`;
+      firebase.database().ref(`${roomPath}/buzzQueue`).set(state.buzzQueue).catch(() => {});
+      firebase.database().ref(`${roomPath}/buzzerLocked`).set(state.buzzerLocked).catch(() => {});
+    }
+  }
+  renderAll();
+}
+
 function saveState() {
   state = normalizeState(state);
   if (currentRoom) {
@@ -770,7 +786,7 @@ const GameController = {
     state.buzzerLocked = false;
     lastBuzzCount = 0;
     AudioFX.playWrong();
-    saveState();
+    syncBuzzerStateDirect();
   },
 
   replaceLetter() {
@@ -793,7 +809,7 @@ const GameController = {
     state.buzzQueue = [];
     state.buzzerLocked = false;
     lastBuzzCount = 0;
-    saveState();
+    syncBuzzerStateDirect();
   },
 
   startTimer() {
@@ -802,7 +818,13 @@ const GameController = {
       if (state.timer > 0) {
         state.timer--;
         if (state.timer === 0) AudioFX.playWrong();
-        saveState();
+        if (currentRoom) {
+          localStorage.setItem(STORAGE_KEY(), JSON.stringify(state));
+          if (isCloudConnected) {
+            firebase.database().ref(`horoof_rooms/${currentRoom}/timer`).set(state.timer).catch(() => {});
+          }
+        }
+        renderAll();
       } else {
         this.stopTimer();
       }
@@ -816,7 +838,13 @@ const GameController = {
   resetTimer() {
     this.stopTimer();
     state.timer = 15;
-    saveState();
+    if (currentRoom) {
+      localStorage.setItem(STORAGE_KEY(), JSON.stringify(state));
+      if (isCloudConnected) {
+        firebase.database().ref(`horoof_rooms/${currentRoom}/timer`).set(state.timer).catch(() => {});
+      }
+    }
+    renderAll();
   },
 
   checkWin(team) {
@@ -891,14 +919,20 @@ const PlayerClient = {
     this.name = nameInput;
     this.team = selectedTeamEl ? selectedTeamEl.value : 'green';
 
-    loadState();
     state.players[this.id] = {
       id: this.id,
       name: this.name,
       team: this.team,
       joinedAt: getAccurateNow()
     };
-    saveState();
+
+    if (currentRoom) {
+      localStorage.setItem(STORAGE_KEY(), JSON.stringify(state));
+      if (isCloudConnected) {
+        firebase.database().ref(`horoof_rooms/${currentRoom}/players/${this.id}`).set(state.players[this.id]).catch(() => {});
+      }
+    }
+    renderAll();
 
     document.getElementById('playerJoinForm').classList.add('hidden');
     document.getElementById('playerBuzzerPad').classList.remove('hidden');
@@ -908,6 +942,9 @@ const PlayerClient = {
 
   buzz() {
     AudioFX.init();
+    if (!Array.isArray(state.buzzQueue)) {
+      state.buzzQueue = [];
+    }
     if (state.buzzQueue.some(b => b.id === this.id)) return;
 
     const exactTimestamp = getAccurateNow();
@@ -921,9 +958,10 @@ const PlayerClient = {
 
     state.buzzQueue.sort((a, b) => a.ts - b.ts);
     state.buzzerLocked = true;
+    lastBuzzCount = state.buzzQueue.length;
 
     AudioFX.playBuzz();
-    saveState();
+    syncBuzzerStateDirect();
   }
 };
 
@@ -1119,7 +1157,8 @@ function renderAll() {
   const bigBtn = document.getElementById('bigBuzzerBtn');
   const statusMsg = document.getElementById('playerStatusMsg');
   if (bigBtn) {
-    if (state.buzzQueue.length > 0) {
+    const alreadyInQueue = state.buzzQueue.some(b => b.id === PlayerClient.id);
+    if (state.buzzQueue.length > 0 && (alreadyInQueue || state.buzzerLocked)) {
       bigBtn.classList.add('locked');
       const winner = state.buzzQueue[0];
       statusMsg.textContent = winner.id === PlayerClient.id
