@@ -201,12 +201,17 @@ const AudioFX = {
     letterClick: './sounds/letter-click.mp3'
   },
   init() {
-    if (!this.ctx) {
-      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    if (this.ctx.state === 'suspended') {
-      this.ctx.resume().catch(() => {});
-    }
+    try {
+      if (!this.ctx) {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) {
+          this.ctx = new AudioCtx();
+        }
+      }
+      if (this.ctx && this.ctx.state === 'suspended') {
+        this.ctx.resume().catch(() => {});
+      }
+    } catch (_) {}
     this.preloadHostedFiles();
   },
   preloadHostedFiles() {
@@ -218,27 +223,16 @@ const AudioFX = {
       }
     });
   },
+  updateBoardUnlockBtn() {
+    const btn = document.getElementById('boardAudioUnlockBtn');
+    if (btn && currentMode === 'board') {
+      btn.textContent = this.unlocked ? '🔊 الصوت مفعّل' : '🔇 اضغط لتفعيل الصوت';
+    }
+  },
   unlockOnInteraction() {
     this.unlocked = true;
     this.init();
-
-    const btn = document.getElementById('boardAudioUnlockBtn');
-    if (btn && currentMode === 'board') {
-      btn.textContent = '🔊 الصوت مفعّل';
-    }
-
-    const firstSrc = this.customFiles.letterClick || this.defaultPaths.letterClick;
-    if (firstSrc) {
-      const probe = new Audio(firstSrc);
-      probe.muted = true;
-      const p = probe.play();
-      if (p && typeof p.then === 'function') {
-        p.then(() => {
-          probe.pause();
-          probe.currentTime = 0;
-        }).catch(() => {});
-      }
-    }
+    this.updateBoardUnlockBtn();
   },
   setCustomFile(key, inputEl) {
     const file = inputEl && inputEl.files && inputEl.files[0];
@@ -247,6 +241,19 @@ const AudioFX = {
       URL.revokeObjectURL(this.customFiles[key]);
     }
     this.customFiles[key] = URL.createObjectURL(file);
+    if (this.preloadedAudios[key]) {
+      this.preloadedAudios[key].src = this.customFiles[key];
+      this.preloadedAudios[key].load();
+    }
+  },
+  stopAllManagedAudios() {
+    Object.values(this.activeAudios).forEach((el) => {
+      if (!el) return;
+      try {
+        el.pause();
+        el.currentTime = 0;
+      } catch (_) {}
+    });
   },
   tryPlayFile(key, fallbackFn) {
     this.init();
@@ -256,41 +263,50 @@ const AudioFX = {
       return;
     }
 
-    if (this.activeAudios[key]) {
-      try {
-        this.activeAudios[key].pause();
-        this.activeAudios[key].currentTime = 0;
-      } catch (_) {}
+    this.stopAllManagedAudios();
+
+    let audio = this.preloadedAudios[key];
+    if (!audio || audio.src !== new URL(src, window.location.href).href) {
+      audio = new Audio(src);
+      audio.preload = 'auto';
+      this.preloadedAudios[key] = audio;
     }
 
-    const audio = new Audio(src);
-    audio.preload = 'auto';
     this.activeAudios[key] = audio;
+    audio.muted = false;
+    audio.volume = 1;
+    audio.currentTime = 0;
 
     const playPromise = audio.play();
-    if (playPromise && typeof playPromise.catch === 'function') {
-      playPromise.catch((err) => {
-        console.warn('Audio play blocked or failed for', key, src, err);
-        const btn = document.getElementById('boardAudioUnlockBtn');
-        if (btn && currentMode === 'board') {
-          btn.textContent = '🔇 اضغط لتفعيل الصوت';
+    if (playPromise && typeof playPromise.then === 'function') {
+      playPromise.then(() => {
+        this.unlocked = true;
+        this.updateBoardUnlockBtn();
+      }).catch((err) => {
+        console.warn('Audio file playback issue for', key, src, err);
+        if (!this.unlocked) {
+          this.updateBoardUnlockBtn();
         }
-        if (typeof fallbackFn === 'function') fallbackFn();
       });
     }
   },
   tone(freq, type, duration, delay = 0, vol = 0.25) {
-    this.init();
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    osc.type = type;
-    osc.frequency.setValueAtTime(freq, this.ctx.currentTime + delay);
-    gain.gain.setValueAtTime(vol, this.ctx.currentTime + delay);
-    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + delay + duration);
-    osc.connect(gain);
-    gain.connect(this.ctx.destination);
-    osc.start(this.ctx.currentTime + delay);
-    osc.stop(this.ctx.currentTime + delay + duration);
+    if (!this.ctx) return;
+    try {
+      if (this.ctx.state === 'suspended') {
+        this.ctx.resume().catch(() => {});
+      }
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, this.ctx.currentTime + delay);
+      gain.gain.setValueAtTime(vol, this.ctx.currentTime + delay);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + delay + duration);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(this.ctx.currentTime + delay);
+      osc.stop(this.ctx.currentTime + delay + duration);
+    } catch (_) {}
   },
   // مقطع 1 (~7 ثوانٍ): بدء لوحة
   playStartBoard() {
@@ -318,9 +334,7 @@ const AudioFX = {
     });
   },
   playShuffle() {
-    for (let i = 0; i < 14; i++) {
-      this.tone(280 + (i * 50), 'square', 0.065, i * 0.045, 0.14);
-    }
+    this.playStartBoard();
   },
   playSelect() {
     this.playLetterClick();
@@ -330,30 +344,16 @@ const AudioFX = {
     this.tone(260, 'square', 0.28, 0.05, 0.25);
   },
   playCorrect() {
-    [440, 554.37, 659.25, 880].forEach((f, i) => {
-      this.tone(f, 'triangle', 0.16, i * 0.075, 0.28);
-    });
+    this.playStartGame();
   },
   playWrong() {
     this.tone(140, 'sawtooth', 0.45, 0, 0.3);
   },
   playWin() {
-    const fanfare = [
-      { f: 523.25, d: 0.14, t: 0 },
-      { f: 659.25, d: 0.14, t: 0.14 },
-      { f: 783.99, d: 0.14, t: 0.28 },
-      { f: 1046.5, d: 0.26, t: 0.42 },
-      { f: 783.99, d: 0.14, t: 0.72 },
-      { f: 1046.5, d: 0.42, t: 0.88 }
-    ];
-    fanfare.forEach(n => this.tone(n.f, 'square', n.d, n.t, 0.22));
+    this.playStartGame();
   },
   playGoldReveal() {
-    const shimmer = [880, 1174.66, 1318.51, 1760, 2093];
-    shimmer.forEach((f, i) => {
-      this.tone(f, 'sine', 0.18, i * 0.07, 0.28);
-      this.tone(f * 1.5, 'triangle', 0.12, i * 0.07 + 0.02, 0.12);
-    });
+    this.playStartGame();
   }
 };
 
@@ -630,6 +630,7 @@ function launchMode(mode, forcedRoom = null) {
   if (mode === 'board') {
     document.getElementById('boardScreen').classList.add('active');
     document.getElementById('boardRoomLabel').textContent = currentRoom;
+    AudioFX.updateBoardUnlockBtn();
   } else if (mode === 'host') {
     document.getElementById('hostScreen').classList.add('active');
     document.getElementById('hostRoomLabel').textContent = currentRoom;
@@ -1056,11 +1057,8 @@ function renderAll() {
         }
       }
 
-      if (lastRevealedGoldIndex !== activeCell.index && currentMode !== 'player') {
+      if (lastRevealedGoldIndex !== activeCell.index) {
         lastRevealedGoldIndex = activeCell.index;
-        setTimeout(() => {
-          AudioFX.playGoldReveal();
-        }, 450);
       }
     } else {
       if (goldShowcase) goldShowcase.classList.add('hidden');
