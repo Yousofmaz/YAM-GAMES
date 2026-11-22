@@ -56,6 +56,133 @@ function getAccurateNow() {
 }
 
 // ==========================================
+// أنيميشن السبيكة الذهبية (ظهور + لف ودوران في الشاشة)
+// ==========================================
+function injectGoldSpinAnimationStyles() {
+  if (document.getElementById('goldSpinAnimStyle')) return;
+  const style = document.createElement('style');
+  style.id = 'goldSpinAnimStyle';
+  style.textContent = `
+    @keyframes goldAppearAndSpin {
+      0% {
+        opacity: 0;
+        transform: scale(0.25) rotateY(0deg) rotateZ(-25deg);
+      }
+      35% {
+        opacity: 1;
+        transform: scale(1.22) rotateY(180deg) rotateZ(12deg);
+      }
+      70% {
+        opacity: 1;
+        transform: scale(1.05) rotateY(360deg) rotateZ(-8deg);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1) rotateY(720deg) rotateZ(0deg);
+      }
+    }
+
+    @keyframes goldContinuousSpin {
+      0% {
+        transform: rotateY(0deg) rotateZ(0deg) scale(1);
+      }
+      50% {
+        transform: rotateY(180deg) rotateZ(10deg) scale(1.12);
+      }
+      100% {
+        transform: rotateY(360deg) rotateZ(0deg) scale(1);
+      }
+    }
+
+    @keyframes goldScreenOverlayAnim {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.2) rotate(-35deg);
+      }
+      25% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.25) rotate(180deg);
+      }
+      65% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.1) rotate(540deg);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.7) rotate(720deg);
+      }
+    }
+
+    .gold-ingot-3d,
+    #goldBarShowcase .gold-ingot-3d,
+    .gold-spin-active {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transform-style: preserve-3d;
+      animation: goldAppearAndSpin 1.4s cubic-bezier(0.22, 1, 0.36, 1) forwards,
+                 goldContinuousSpin 2.6s linear 1.4s infinite;
+      filter: drop-shadow(0 0 18px rgba(250, 204, 21, 0.85));
+    }
+
+    .gold-screen-spinner {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      z-index: 9999;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 24px 34px;
+      border-radius: 24px;
+      background: radial-gradient(circle, rgba(250, 204, 21, 0.28) 0%, rgba(15, 23, 42, 0.88) 75%);
+      border: 2px solid rgba(253, 224, 71, 0.85);
+      box-shadow: 0 0 45px rgba(234, 179, 8, 0.65);
+      animation: goldScreenOverlayAnim 2.2s ease-in-out forwards;
+    }
+
+    .gold-screen-spinner .gold-bar-icon {
+      font-size: 84px;
+      line-height: 1;
+      animation: goldContinuousSpin 1.1s linear infinite;
+      filter: drop-shadow(0 0 22px rgba(253, 224, 71, 0.95));
+    }
+
+    .gold-screen-spinner .gold-bar-label {
+      color: #fef08a;
+      font-size: 22px;
+      font-weight: 800;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+function triggerGoldBarScreenAnimation(letter = '') {
+  injectGoldSpinAnimationStyles();
+  const existing = document.getElementById('goldScreenSpinnerOverlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'goldScreenSpinnerOverlay';
+  overlay.className = 'gold-screen-spinner';
+  overlay.innerHTML = `
+    <div class="gold-bar-icon">🏅</div>
+    <div class="gold-bar-label">سبيكة ذهبية${letter ? ` (${letter})` : ''}!</div>
+  `;
+  document.body.appendChild(overlay);
+
+  setTimeout(() => {
+    if (overlay && overlay.parentNode) {
+      overlay.remove();
+    }
+  }, 2250);
+}
+
+// ==========================================
 // 1. محرك المؤثرات الصوتية + دعم ملفات الصوت المرفوعة من الاستضافة
 // ==========================================
 const AudioFX = {
@@ -242,6 +369,7 @@ let currentRoom = '';
 let currentMode = 'setup';
 let lastBuzzCount = 0;
 let lastRevealedGoldIndex = null;
+let lastAnimatedGoldIndex = null;
 let lastPlayedSoundSeq = 0;
 let lastPlayedSoundTs = 0;
 
@@ -419,6 +547,7 @@ window.addEventListener('storage', (e) => {
 // 3. تهيئة الروابط والأوضاع + زر الرجوع
 // ==========================================
 window.addEventListener('DOMContentLoaded', () => {
+  injectGoldSpinAnimationStyles();
   AudioFX.preloadHostedFiles();
   window.addEventListener('pointerdown', () => AudioFX.unlockOnInteraction(), { once: true });
   window.addEventListener('keydown', () => AudioFX.unlockOnInteraction(), { once: true });
@@ -497,13 +626,13 @@ function launchMode(mode, forcedRoom = null) {
 }
 
 // ==========================================
-// 4. منطق اللعبة وخوارزمية الفوز (BFS) + السبيكة الذهبية
+// 4. منطق اللعبة وخوارزمية الفوز (BFS) + السبيكة الذهبية (حرف واحد فقط)
 // ==========================================
 const GameController = {
   timerInterval: null,
 
   assignHiddenGoldBars(cells) {
-    const goldCount = Math.floor(Math.random() * 2) + 3;
+    const goldCount = 1;
     const indices = cells.map((_, i) => i).sort(() => Math.random() - 0.5);
     const chosen = new Set(indices.slice(0, goldCount));
 
@@ -542,8 +671,8 @@ const GameController = {
     state.buzzerLocked = false;
     lastBuzzCount = 0;
     lastRevealedGoldIndex = null;
+    lastAnimatedGoldIndex = null;
     if (playSound) {
-      AudioFX.playShuffle();
       broadcastRoomSound('startBoard');
     }
     saveState();
@@ -592,13 +721,11 @@ const GameController = {
     state.buzzerLocked = false;
     lastBuzzCount = 0;
 
-    broadcastRoomSound('letterClick');
-
     if (cell.hasGoldBar && !cell.goldRevealed) {
       cell.goldRevealed = true;
-      AudioFX.playGoldReveal();
     }
 
+    broadcastRoomSound('letterClick');
     saveState();
   },
 
@@ -829,6 +956,8 @@ const PlayerClient = {
 // 6. رسم الواجهات وتحديثها لحظياً
 // ==========================================
 function renderAll() {
+  injectGoldSpinAnimationStyles();
+
   document.getElementById('boardGreenScore').textContent = state.greenScore;
   document.getElementById('boardRedScore').textContent = state.redScore;
   document.getElementById('boardTimer').textContent = state.timer;
@@ -893,11 +1022,27 @@ function renderAll() {
       if (goldShowcase) {
         goldShowcase.classList.remove('hidden');
         if (goldShowcaseLetter) goldShowcaseLetter.textContent = activeCell.letter;
+        const ingotEl = goldShowcase.querySelector('.gold-ingot-3d');
+        if (ingotEl && lastAnimatedGoldIndex !== activeCell.index) {
+          ingotEl.classList.remove('gold-spin-active');
+          void ingotEl.offsetWidth;
+          ingotEl.classList.add('gold-spin-active');
+        }
       }
       if (hostGoldAlert) hostGoldAlert.classList.remove('hidden');
+
+      if (lastAnimatedGoldIndex !== activeCell.index) {
+        lastAnimatedGoldIndex = activeCell.index;
+        if (currentMode !== 'player') {
+          triggerGoldBarScreenAnimation(activeCell.letter);
+        }
+      }
+
       if (lastRevealedGoldIndex !== activeCell.index && currentMode !== 'player') {
         lastRevealedGoldIndex = activeCell.index;
-        AudioFX.playGoldReveal();
+        setTimeout(() => {
+          AudioFX.playGoldReveal();
+        }, 450);
       }
     } else {
       if (goldShowcase) goldShowcase.classList.add('hidden');
