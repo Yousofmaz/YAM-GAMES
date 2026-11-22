@@ -267,9 +267,7 @@ const AudioFX = {
       });
     }
   },
-  tone() {
-    // معطّل عمداً حتى لا يظهر صوت نغمات غريب عند الضغط المتكرر
-  },
+  tone() {},
   playStartBoard() {
     this.playHostedSound('startBoard');
   },
@@ -648,6 +646,9 @@ const GameController = {
 
   startBoard() {
     state.boardStarted = true;
+    state.buzzQueue = [];
+    state.buzzerLocked = false;
+    lastBuzzCount = 0;
     if (!state.cells || state.cells.length !== TOTAL_LETTER_CELLS) {
       this.initBoard(false);
     }
@@ -663,6 +664,9 @@ const GameController = {
     this.stopTimer();
     state.timer = 15;
     state.boardStarted = true;
+    state.buzzQueue = [];
+    state.buzzerLocked = false;
+    lastBuzzCount = 0;
     this.initBoard(true);
   },
 
@@ -700,6 +704,9 @@ const GameController = {
       alert('اختر حرفاً أولاً ليظهر على اللوحة');
       return;
     }
+    state.buzzQueue = [];
+    state.buzzerLocked = false;
+    lastBuzzCount = 0;
     broadcastRoomSound('letterClick');
     state.letterRevealedOnBoard = true;
     state.answerRevealedOnBoard = false;
@@ -723,6 +730,9 @@ const GameController = {
     if (list.length > 0) {
       state.questionIndex = (state.questionIndex + 1) % list.length;
       state.answerRevealedOnBoard = false;
+      state.buzzQueue = [];
+      state.buzzerLocked = false;
+      lastBuzzCount = 0;
       saveState();
     }
   },
@@ -771,6 +781,9 @@ const GameController = {
       state.cells[state.activeIndex].letter = available[Math.floor(Math.random() * available.length)];
       state.questionIndex = 0;
       state.answerRevealedOnBoard = false;
+      state.buzzQueue = [];
+      state.buzzerLocked = false;
+      lastBuzzCount = 0;
       broadcastRoomSound('letterClick');
       saveState();
     }
@@ -895,7 +908,6 @@ const PlayerClient = {
 
   buzz() {
     AudioFX.init();
-    loadState();
     if (state.buzzQueue.some(b => b.id === this.id)) return;
 
     const exactTimestamp = getAccurateNow();
